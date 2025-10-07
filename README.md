@@ -48,16 +48,19 @@
 ```bash
 # Clone repository
 git clone https://github.com/Zeeeepa/qwen-api.git
-cd z.ai2api_python
+cd qwen-api
 
-# Install dependencies
+# Install package in development mode
 pip install -e .
 
-# Configure environment
+# Copy environment template
 cp .env.example .env
-# Edit .env and add your credentials
 
-# Start server (that's it!)
+# Edit .env with your Qwen credentials
+# Required: QWEN_EMAIL and QWEN_PASSWORD
+nano .env  # or use your preferred editor
+
+# Start server!
 python main.py
 ```
 
