@@ -105,10 +105,11 @@ class Settings(BaseSettings):
 
 
 
-    # Model Configuration
-    PRIMARY_MODEL: str = os.getenv("PRIMARY_MODEL", "GLM-4.5")
-    THINKING_MODEL: str = os.getenv("THINKING_MODEL", "GLM-4.5-Thinking")
-    SEARCH_MODEL: str = os.getenv("SEARCH_MODEL", "GLM-4.5-Search")
+    # Model Configuration - Using Qwen Models
+    PRIMARY_MODEL: str = os.getenv("PRIMARY_MODEL", "qwen-max")
+    THINKING_MODEL: str = os.getenv("THINKING_MODEL", "qwen-max-thinking")
+    SEARCH_MODEL: str = os.getenv("SEARCH_MODEL", "qwen-max-search")
+    AIR_MODEL: str = os.getenv("AIR_MODEL", "qwen-turbo")
 
 
     # Provider Model Mapping
@@ -116,7 +117,18 @@ class Settings(BaseSettings):
     def provider_model_mapping(self) -> Dict[str, str]:
         """模型到提供商的映射"""
         return {
-            # Z.AI models
+            # Qwen models (primary)
+            "qwen-max": "qwen",
+            "qwen-max-thinking": "qwen",
+            "qwen-max-search": "qwen",
+            "qwen-turbo": "qwen",
+            "qwen-plus": "qwen",
+            "qwen-max-image": "qwen",
+            "qwen-max-video": "qwen",
+            "qwen3-coder-7b": "qwen",
+            "qwen3-coder-14b": "qwen",
+            "qwen3-coder-32b": "qwen",
+            # Legacy Z.AI models (backward compatibility)
             "GLM-4.5": "zai",
             "GLM-4.5-Thinking": "zai",
             "GLM-4.5-Search": "zai",
