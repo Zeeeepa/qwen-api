@@ -1,6 +1,5 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
-from app.core import config, zai_transformer, openai
+from app.core import config, openai, qwen_transformer
 
-__all__ = ["config", "zai_transformer", "openai"]
+__all__ = ["config", "qwen_transformer", "openai"]

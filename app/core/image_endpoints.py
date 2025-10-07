@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 """
 Image and Video Generation Endpoints
@@ -7,13 +6,14 @@ OpenAI-compatible API endpoints for Qwen image/video generation
 """
 
 from typing import Optional
+
 from fastapi import APIRouter, Header, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from app.core.config import settings
-from app.utils.logger import get_logger
 from app.providers import get_provider_router
+from app.utils.logger import get_logger
 
 logger = get_logger()
 router = APIRouter()
@@ -54,28 +54,28 @@ class VideoGenerationRequest(BaseModel):
 async def generate_images(request: ImageGenerationRequest, authorization: str = Header(...)):
     """
     Generate images from text prompts
-    
+
     OpenAI-compatible endpoint for text-to-image generation
     """
     logger.info(f"🎨 Image generation request: '{request.prompt[:50]}...' size={request.size}")
-    
+
     try:
         # Validate auth
         if not settings.SKIP_AUTH_TOKEN:
             if not authorization.startswith("Bearer "):
                 raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
-            
+
             api_key = authorization[7:]
             if api_key != settings.AUTH_TOKEN:
                 raise HTTPException(status_code=401, detail="Invalid API key")
-        
+
         # Get provider
         provider_router = get_provider_router()
         provider = provider_router._get_provider_for_model(request.model or "qwen-max-image")
-        
+
         if not provider:
             raise HTTPException(status_code=404, detail=f"Provider not found for model: {request.model}")
-        
+
         # Generate image
         result = await provider.generate_image(
             prompt=request.prompt,
@@ -83,10 +83,10 @@ async def generate_images(request: ImageGenerationRequest, authorization: str = 
             size=request.size,
             n=request.n
         )
-        
+
         logger.info("✅ Image generation successful")
         return JSONResponse(content=result)
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -98,28 +98,28 @@ async def generate_images(request: ImageGenerationRequest, authorization: str = 
 async def edit_images(request: ImageEditRequest, authorization: str = Header(...)):
     """
     Edit images based on text instructions
-    
+
     OpenAI-compatible endpoint for image editing
     """
     logger.info(f"🎨 Image edit request: '{request.prompt[:50]}...'")
-    
+
     try:
         # Validate auth
         if not settings.SKIP_AUTH_TOKEN:
             if not authorization.startswith("Bearer "):
                 raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
-            
+
             api_key = authorization[7:]
             if api_key != settings.AUTH_TOKEN:
                 raise HTTPException(status_code=401, detail="Invalid API key")
-        
+
         # Get provider
         provider_router = get_provider_router()
         provider = provider_router._get_provider_for_model(request.model or "qwen-max-image_edit")
-        
+
         if not provider:
             raise HTTPException(status_code=404, detail=f"Provider not found for model: {request.model}")
-        
+
         # Edit image
         result = await provider.edit_image(
             image=request.image,
@@ -129,10 +129,10 @@ async def edit_images(request: ImageEditRequest, authorization: str = Header(...
             size=request.size,
             n=request.n
         )
-        
+
         logger.info("✅ Image editing successful")
         return JSONResponse(content=result)
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -144,28 +144,28 @@ async def edit_images(request: ImageEditRequest, authorization: str = Header(...
 async def generate_videos(request: VideoGenerationRequest, authorization: str = Header(...)):
     """
     Generate videos from text prompts
-    
+
     Qwen-specific endpoint for text-to-video generation
     """
     logger.info(f"🎬 Video generation request: '{request.prompt[:50]}...' duration={request.duration}s")
-    
+
     try:
         # Validate auth
         if not settings.SKIP_AUTH_TOKEN:
             if not authorization.startswith("Bearer "):
                 raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
-            
+
             api_key = authorization[7:]
             if api_key != settings.AUTH_TOKEN:
                 raise HTTPException(status_code=401, detail="Invalid API key")
-        
+
         # Get provider
         provider_router = get_provider_router()
         provider = provider_router._get_provider_for_model(request.model or "qwen-max-video")
-        
+
         if not provider:
             raise HTTPException(status_code=404, detail=f"Provider not found for model: {request.model}")
-        
+
         # Generate video
         result = await provider.generate_video(
             prompt=request.prompt,
@@ -173,10 +173,10 @@ async def generate_videos(request: VideoGenerationRequest, authorization: str = 
             duration=request.duration,
             size=request.size
         )
-        
+
         logger.info("✅ Video generation successful")
         return JSONResponse(content=result)
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -195,38 +195,38 @@ class DeepResearchRequest(BaseModel):
 async def deep_research(request: DeepResearchRequest, authorization: str = Header(...)):
     """
     Perform deep research on a query
-    
+
     Qwen-specific endpoint for comprehensive research with citations
     """
     logger.info(f"🔬 Deep research request: '{request.query[:50]}...' max_iterations={request.max_iterations}")
-    
+
     try:
         # Validate auth
         if not settings.SKIP_AUTH_TOKEN:
             if not authorization.startswith("Bearer "):
                 raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
-            
+
             api_key = authorization[7:]
             if api_key != settings.AUTH_TOKEN:
                 raise HTTPException(status_code=401, detail="Invalid API key")
-        
+
         # Get provider
         provider_router = get_provider_router()
         provider = provider_router._get_provider_for_model(request.model or "qwen-max-deep-research")
-        
+
         if not provider:
             raise HTTPException(status_code=404, detail=f"Provider not found for model: {request.model}")
-        
+
         # Perform deep research
         result = await provider.deep_research(
             query=request.query,
             model=request.model or "qwen-max-deep-research",
             max_iterations=request.max_iterations
         )
-        
+
         logger.info("✅ Deep research successful")
         return JSONResponse(content=result)
-        
+
     except HTTPException:
         raise
     except Exception as e:

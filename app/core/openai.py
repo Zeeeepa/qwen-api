@@ -1,16 +1,24 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
-import time
 import json
-from typing import List, Dict, Any
+import time
+from typing import Any, Dict, List
+
 from fastapi import APIRouter, Header, HTTPException
-from fastapi.responses import StreamingResponse, JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 
 from app.core.config import settings
-from app.models.schemas import OpenAIRequest, Message, ModelsResponse, Model, OpenAIResponse, Choice, Usage
-from app.utils.logger import get_logger
+from app.models.schemas import (
+    Choice,
+    Message,
+    Model,
+    ModelsResponse,
+    OpenAIRequest,
+    OpenAIResponse,
+    Usage,
+)
 from app.providers import get_provider_router
+from app.utils.logger import get_logger
 from app.utils.token_pool import get_token_pool
 
 logger = get_logger()

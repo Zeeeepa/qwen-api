@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 """
 用户代理工具模块
@@ -8,6 +7,7 @@
 
 import random
 from typing import Dict, Optional
+
 from fake_useragent import UserAgent
 
 # 全局 UserAgent 实例（单例模式）

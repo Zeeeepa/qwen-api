@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 """
 Token池管理器
@@ -8,9 +7,10 @@ Token池管理器
 
 import asyncio
 import time
-from typing import Dict, List, Optional, Tuple
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from threading import Lock
+from typing import Dict, List, Optional
+
 import httpx
 
 from app.utils.logger import logger
@@ -74,7 +74,7 @@ class TokenPool:
     def __init__(self, tokens: List[str], failure_threshold: int = 3, recovery_timeout: int = 1800):
         """
         初始化Token池
-        
+
         Args:
             tokens: token列表
             failure_threshold: 失败阈值，超过此次数将标记为不可用

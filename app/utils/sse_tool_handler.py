@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 """
 SSE Tool Handler
@@ -15,8 +14,8 @@ SSE Tool Handler
 
 import json
 import time
-from typing import Dict, Any, Generator
 from enum import Enum
+from typing import Any, Dict, Generator
 
 from app.utils.logger import get_logger
 
@@ -166,7 +165,7 @@ class SSEToolHandler:
             if index == 0:
                 # 第一个块：提取参数片段
                 if self.has_tool_call:
-                    logger.debug(f"📦 从第一个块提取参数片段")
+                    logger.debug("📦 从第一个块提取参数片段")
                     # 找到 "result" 的位置，提取之前的参数片段
                     result_pos = edit_content.find('"result"')
                     if result_pos > 0:
@@ -245,7 +244,7 @@ class SSEToolHandler:
 
         # 工具调用完成判断：检测到 "null," 开头的 edit_content
         if self.has_tool_call and edit_content and edit_content.startswith("null,"):
-            logger.info(f"🏁 检测到工具调用结束标记")
+            logger.info("🏁 检测到工具调用结束标记")
 
             # 完成当前工具调用
             yield from self._finish_current_tool()
@@ -412,7 +411,7 @@ class SSEToolHandler:
         # 1. 修复缺少开始括号的情况（json-repair 无法处理）
         if not text.startswith('{') and text.endswith('}'):
             text = '{' + text
-            logger.debug(f"🔧 补全开始括号")
+            logger.debug("🔧 补全开始括号")
 
         # 2. 修复末尾多余的反斜杠和引号（json-repair 可能处理不当）
         # 匹配模式：字符串值末尾的 \" 后面跟着 } 或 ,
@@ -421,13 +420,12 @@ class SSEToolHandler:
         pattern = r'([^\\])\\"([}\s,])'
         if re.search(pattern, text):
             text = re.sub(pattern, r'\1"\2', text)
-            logger.debug(f"🔧 修复末尾多余的反斜杠")
+            logger.debug("🔧 修复末尾多余的反斜杠")
 
         return text
 
     def _fix_path_escaping_in_args(self, args_obj: Dict[str, Any]) -> Dict[str, Any]:
         """修复参数对象中路径的过度转义问题"""
-        import re
 
         # 需要检查的路径字段
         path_fields = ['file_path', 'path', 'directory', 'folder']

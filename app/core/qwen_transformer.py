@@ -1,18 +1,17 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 import json
+import random
 import time
 import uuid
-import random
 from datetime import datetime
-from typing import Dict, List, Any, Optional, Generator, AsyncGenerator
+from typing import Any, AsyncGenerator, Dict, Generator
+
 import httpx
-import asyncio
 
 from app.core.config import settings
 from app.utils.logger import get_logger
-from app.utils.token_pool import get_token_pool, initialize_token_pool
+from app.utils.token_pool import get_token_pool
 from app.utils.user_agent import get_random_user_agent
 
 logger = get_logger()
@@ -249,7 +248,6 @@ class QwenTransformer:
         requested_model = request.get("model", settings.PRIMARY_MODEL)
         is_thinking = requested_model == settings.THINKING_MODEL or request.get("reasoning", False)
         is_search = requested_model == settings.SEARCH_MODEL
-        is_air = requested_model == settings.AIR_MODEL
 
         # 获取上游模型ID（使用模型映射）
         upstream_model_id = self.model_mapping.get(requested_model, "0727-360B-API")
@@ -305,9 +303,9 @@ class QwenTransformer:
         mcp_servers = []
         if is_search:
             mcp_servers.append("deep-web-search")
-            logger.info(f"🔍 检测到搜索模型，添加 deep-web-search MCP 服务器")
+            logger.info("🔍 检测到搜索模型，添加 deep-web-search MCP 服务器")
         else:
-            logger.debug(f"  非搜索模型，不添加 MCP 服务器")
+            logger.debug("  非搜索模型，不添加 MCP 服务器")
 
         logger.debug(f"  MCP服务器列表: {mcp_servers}")
 
@@ -379,7 +377,7 @@ class QwenTransformer:
         logger.info("✅ 请求转换完成")
 
         # 记录关键的请求信息用于调试
-        logger.debug(f"  📋 发送到qwen.ai的关键信息:")
+        logger.debug("  📋 发送到qwen.ai的关键信息:")
         logger.debug(f"    - 上游模型: {body['model']}")
         logger.debug(f"    - MCP服务器: {body['mcp_servers']}")
         logger.debug(f"    - web_search: {body['features']['web_search']}")

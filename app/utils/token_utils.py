@@ -12,16 +12,16 @@ from loguru import logger
 def compress_token(credentials: str) -> str:
     """
     Compress credentials string using gzip and base64 encode
-    
+
     Args:
         credentials: String in format "qwen_token|ssxmod_itna_cookie"
-        
+
     Returns:
         Base64 encoded compressed string
-        
+
     Raises:
         ValueError: If credentials is empty
-        
+
     Example:
         >>> credentials = "abc123|xyz789"
         >>> compressed = compress_token(credentials)
@@ -30,7 +30,7 @@ def compress_token(credentials: str) -> str:
     """
     if not credentials or not credentials.strip():
         raise ValueError("Credentials cannot be empty")
-        
+
     try:
         # Compress with gzip
         compressed = gzip.compress(credentials.encode('utf-8'))
@@ -46,13 +46,13 @@ def compress_token(credentials: str) -> str:
 def decompress_token(compressed: str) -> str:
     """
     Decompress base64 encoded gzip compressed token
-    
+
     Args:
         compressed: Base64 encoded compressed string
-        
+
     Returns:
         Original credentials string
-        
+
     Example:
         >>> credentials = "abc123|xyz789"
         >>> compressed = compress_token(credentials)
@@ -78,13 +78,13 @@ def decompress_token(compressed: str) -> str:
 def parse_credentials(credentials: str) -> Optional[Dict[str, str]]:
     """
     Parse credentials string into components
-    
+
     Args:
         credentials: String in format "qwen_token|ssxmod_itna_cookie"
-        
+
     Returns:
         Dictionary with 'qwen_token' and 'ssxmod_itna' keys, or None if invalid
-        
+
     Example:
         >>> creds = parse_credentials("abc123|xyz789")
         >>> creds['qwen_token']
@@ -97,7 +97,7 @@ def parse_credentials(credentials: str) -> Optional[Dict[str, str]]:
         if len(parts) < 2:
             logger.warning("⚠️ Invalid credentials format: missing pipe separator")
             return None
-        
+
         return {
             'qwen_token': parts[0].strip(),
             'ssxmod_itna': parts[1].strip()
@@ -110,16 +110,16 @@ def parse_credentials(credentials: str) -> Optional[Dict[str, str]]:
 def validate_token_format(token: str) -> bool:
     """
     Validate token format without decompressing
-    
+
     Args:
         token: Compressed token string
-        
+
     Returns:
         True if format is valid, False otherwise
     """
     if not token or not token.strip():
         return False
-        
+
     try:
         # Check if it's valid base64
         decoded = base64.b64decode(token)

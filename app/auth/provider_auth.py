@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 """
 Provider Authentication Manager
@@ -7,10 +6,8 @@ Handles automatic login and session management for all providers
 """
 
 import asyncio
-import httpx
-import json
-from typing import Dict, Optional, Any
 from abc import ABC, abstractmethod
+from typing import Any, Dict, Optional
 
 from app.auth.session_store import SessionStore
 from app.utils.logger import get_logger
@@ -24,7 +21,7 @@ class ProviderAuth(ABC):
     def __init__(self, config: Dict[str, str]):
         """
         Initialize provider authentication
-        
+
         Args:
             config: Provider configuration (name, baseUrl, loginUrl, email, password)
         """
@@ -46,7 +43,7 @@ class ProviderAuth(ABC):
     async def login(self) -> Dict[str, Any]:
         """
         Perform login and extract authentication data
-        
+
         Returns:
             Dict containing cookies, token, and any extra data
         """
@@ -55,10 +52,10 @@ class ProviderAuth(ABC):
     async def get_valid_session(self, force_refresh: bool = False) -> Optional[Dict[str, Any]]:
         """
         Get valid session data, auto-login if needed
-        
+
         Args:
             force_refresh: Force new login even if session exists
-            
+
         Returns:
             Dict with cookies and token
         """
@@ -130,7 +127,7 @@ class QwenAuth(ProviderAuth):
     async def login(self) -> Dict[str, Any]:
         """
         Login to Qwen using Playwright and extract Bearer token.
-        
+
         The token is created by:
         1. Extracting web_api_auth_token from localStorage
         2. Extracting ssxmod_itna cookie
@@ -138,9 +135,10 @@ class QwenAuth(ProviderAuth):
         4. Compressing with gzip
         5. Base64 encoding
         """
-        from playwright.async_api import async_playwright
-        import gzip
         import base64
+        import gzip
+
+        from playwright.async_api import async_playwright
 
         async with async_playwright() as p:
             browser = await p.chromium.launch(headless=True)
@@ -277,10 +275,10 @@ class QwenAuth(ProviderAuth):
 def create_auth(config: Dict[str, str]) -> ProviderAuth:
     """
     Create authentication instance for provider
-    
+
     Args:
         config: Provider configuration
-        
+
     Returns:
         ProviderAuth instance
     """
@@ -298,13 +296,9 @@ Provider Authentication Manager
 Handles automatic login and session management for all providers
 """
 
-import asyncio
-import httpx
-import json
-from typing import Dict, Optional, Any
 from abc import ABC, abstractmethod
+from typing import Any, Dict, Optional
 
-from app.auth.session_store import SessionStore
 from app.utils.logger import get_logger
 
 logger = get_logger()
@@ -316,7 +310,7 @@ class ProviderAuth(ABC):
     def __init__(self, config: Dict[str, str]):
         """
         Initialize provider authentication
-        
+
         Args:
             config: Provider configuration (name, baseUrl, loginUrl, email, password)
         """
@@ -338,7 +332,7 @@ class ProviderAuth(ABC):
     async def login(self) -> Dict[str, Any]:
         """
         Perform login and extract authentication data
-        
+
         Returns:
             Dict containing cookies, token, and any extra data
         """
@@ -347,10 +341,10 @@ class ProviderAuth(ABC):
     async def get_valid_session(self, force_refresh: bool = False) -> Optional[Dict[str, Any]]:
         """
         Get valid session data, auto-login if needed
-        
+
         Args:
             force_refresh: Force new login even if session exists
-            
+
         Returns:
             Dict with cookies and token
         """
@@ -422,7 +416,7 @@ class QwenAuth(ProviderAuth):
     async def login(self) -> Dict[str, Any]:
         """
         Login to Qwen using Playwright and extract Bearer token.
-        
+
         The token is created by:
         1. Extracting web_api_auth_token from localStorage
         2. Extracting ssxmod_itna cookie
@@ -430,9 +424,10 @@ class QwenAuth(ProviderAuth):
         4. Compressing with gzip
         5. Base64 encoding
         """
-        from playwright.async_api import async_playwright
-        import gzip
         import base64
+        import gzip
+
+        from playwright.async_api import async_playwright
 
         async with async_playwright() as p:
             browser = await p.chromium.launch(headless=True)
@@ -569,10 +564,10 @@ class QwenAuth(ProviderAuth):
 def create_auth(config: Dict[str, str]) -> ProviderAuth:
     """
     Create authentication instance for provider
-    
+
     Args:
         config: Provider configuration
-        
+
     Returns:
         ProviderAuth instance
     """

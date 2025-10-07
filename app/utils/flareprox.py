@@ -9,10 +9,11 @@ import getpass
 import json
 import os
 import random
-import requests
 import string
 import time
 from typing import Dict, List, Optional
+
+import requests
 
 
 class FlareProxError(Exception):
@@ -340,12 +341,12 @@ class FlareProx:
     def _load_config_file(self, config_path: str, config: Dict) -> Dict:
         """Load configuration from a JSON file."""
         try:
-            with open(config_path, 'r') as f:
+            with open(config_path) as f:
                 file_config = json.load(f)
 
             if "cloudflare" in file_config and not config["cloudflare"]:
                 config["cloudflare"].update(file_config["cloudflare"])
-        except (json.JSONDecodeError, IOError) as e:
+        except (OSError, json.JSONDecodeError) as e:
             print(f"Warning: Could not load config file {config_path}: {e}")
 
         return config
@@ -386,16 +387,16 @@ class FlareProx:
         try:
             with open(self.endpoints_file, 'w') as f:
                 json.dump(endpoints, f, indent=2)
-        except IOError as e:
+        except OSError as e:
             print(f"Warning: Could not save endpoints: {e}")
 
     def _load_endpoints(self) -> List[Dict]:
         """Load endpoints from local file."""
         if os.path.exists(self.endpoints_file):
             try:
-                with open(self.endpoints_file, 'r') as f:
+                with open(self.endpoints_file) as f:
                     return json.load(f)
-            except (json.JSONDecodeError, IOError):
+            except (OSError, json.JSONDecodeError):
                 pass
         return []
 
@@ -480,7 +481,6 @@ class FlareProx:
 
             # Try multiple attempts with different delay
             max_retries = 2
-            success = False
             result = None
 
             for attempt in range(max_retries):
@@ -501,7 +501,6 @@ class FlareProx:
                     }
 
                     if response.status_code == 200:
-                        success = True
                         print(f"Request successful! Status: {result['status_code']}")
 
                         # Try to extract and show IP address from response
@@ -524,14 +523,14 @@ class FlareProx:
                                         print(f"   Response: {response_text[:100]}...")
                             else:
                                 print(f"   Response Length: {result['response_length']} bytes")
-                        except Exception as e:
+                        except Exception:
                             print(f"   Response Length: {result['response_length']} bytes")
 
                         successful += 1
                         break  # Success, no need to retry
 
                     elif response.status_code == 503:
-                        print(f"   Server unavailable (503) - target service may be overloaded")
+                        print("   Server unavailable (503) - target service may be overloaded")
                         if attempt < max_retries - 1:
                             continue  # Retry
                     else:
@@ -540,7 +539,7 @@ class FlareProx:
 
                 except requests.RequestException as e:
                     if attempt < max_retries - 1:
-                        print(f"   Connection error, retrying...")
+                        print("   Connection error, retrying...")
                         continue
                     else:
                         print(f"Request failed: {e}")
@@ -553,7 +552,7 @@ class FlareProx:
 
             results[name] = result if result else {"success": False, "error": "Unknown error"}
 
-        print(f"\nTest Results:")
+        print("\nTest Results:")
         print(f"   Working endpoints: {successful}/{len(endpoints)}")
         if successful < len(endpoints):
             failed_count = len(endpoints) - successful
@@ -570,7 +569,7 @@ class FlareProx:
         if not self.cloudflare:
             raise FlareProxError("FlareProx not configured")
 
-        print(f"\nCleaning up FlareProx endpoints...")
+        print("\nCleaning up FlareProx endpoints...")
 
         try:
             self.cloudflare.cleanup_all()
@@ -623,7 +622,7 @@ def setup_interactive_config() -> bool:
         print(f"\nConfiguration saved to {config_path}")
         print("FlareProx is now configured and ready to use!")
         return True
-    except IOError as e:
+    except OSError as e:
         print(f"Error saving configuration: {e}")
         return False
 
@@ -676,7 +675,7 @@ def show_config_help() -> None:
         if os.path.exists(config_file):
             existing_config_files.append(config_file)
             try:
-                with open(config_file, 'r') as f:
+                with open(config_file) as f:
                     config_data = json.load(f)
                     cf_config = config_data.get("cloudflare", {})
                     api_token = cf_config.get("api_token", "").strip()
@@ -689,11 +688,11 @@ def show_config_help() -> None:
                         len(api_token) > 10 and len(account_id) > 10):
                         valid_config_found = True
                         break
-            except (json.JSONDecodeError, IOError):
+            except (OSError, json.JSONDecodeError):
                 continue
 
     if valid_config_found:
-        print(f"\nFlareProx is already configured with valid credentials.")
+        print("\nFlareProx is already configured with valid credentials.")
         print("Configuration files found:")
         for config_file in existing_config_files:
             print(f"  - {config_file}")
@@ -704,7 +703,7 @@ def show_config_help() -> None:
             return
 
     elif existing_config_files:
-        print(f"\nConfiguration files exist but appear to contain placeholder values:")
+        print("\nConfiguration files exist but appear to contain placeholder values:")
         for config_file in existing_config_files:
             print(f"  - {config_file}")
         print()
