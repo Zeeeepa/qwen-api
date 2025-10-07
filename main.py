@@ -1,27 +1,20 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
-import os
 import sys
-import psutil
-import asyncio
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
-
-from app import __version__
-from app.core.config import settings
-from app.core import openai
-from app.core import image_endpoints
-from app.utils.reload_config import RELOAD_CONFIG
-from app.utils.logger import setup_logger
-from app.utils.token_pool import initialize_token_pool
-from app.utils.flareprox_manager import initialize_flareprox, get_flareprox_manager
-from app.utils.request_tracker import initialize_request_tracker, get_request_tracker
-from app.providers import initialize_providers
-
 from granian import Granian
 
+from app.core import image_endpoints, openai
+from app.core.config import settings
+from app.providers import initialize_providers
+from app.utils.flareprox_manager import initialize_flareprox
+from app.utils.logger import setup_logger
+from app.utils.reload_config import RELOAD_CONFIG
+from app.utils.request_tracker import get_request_tracker, initialize_request_tracker
+from app.utils.token_pool import initialize_token_pool
 
 # Setup logger
 logger = setup_logger(log_dir="logs", debug_mode=settings.DEBUG_LOGGING)
@@ -41,7 +34,7 @@ async def lifespan(app: FastAPI):
     # 初始化 token 池
     token_list = settings.auth_token_list
     if token_list:
-        token_pool = initialize_token_pool(
+        initialize_token_pool(
             tokens=token_list,
             failure_threshold=settings.TOKEN_FAILURE_THRESHOLD,
             recovery_timeout=settings.TOKEN_RECOVERY_TIMEOUT
@@ -50,7 +43,7 @@ async def lifespan(app: FastAPI):
     yield
 
     logger.info("🔄 应用正在关闭...")
-    
+
     # Cleanup request tracker
     tracker = get_request_tracker()
     await tracker.stop()
@@ -74,6 +67,7 @@ app.include_router(image_endpoints.router)
 
 # Include health and monitoring routers
 from app.core import health
+
 app.include_router(health.router, tags=["health"])
 
 

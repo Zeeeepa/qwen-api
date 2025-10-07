@@ -1,7 +1,7 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
-from typing import Dict, List, Optional, Any, Union, Literal
+from typing import Any, Dict, List, Optional, Union
+
 from pydantic import BaseModel
 
 

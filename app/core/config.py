@@ -1,9 +1,10 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 import os
 from typing import Dict, List, Optional
+
 from pydantic_settings import BaseSettings
+
 from app.utils.logger import logger
 
 
@@ -34,7 +35,7 @@ class Settings(BaseSettings):
         tokens = []
         try:
             if os.path.exists(file_path):
-                with open(file_path, 'r', encoding='utf-8') as f:
+                with open(file_path, encoding='utf-8') as f:
                     content = f.read().strip()
 
                     if not content:

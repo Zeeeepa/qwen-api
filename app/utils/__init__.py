@@ -1,6 +1,5 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
-from app.utils import sse_tool_handler, reload_config, logger
+from app.utils import logger, reload_config, sse_tool_handler
 
 __all__ = ["sse_tool_handler", "reload_config", "logger"]

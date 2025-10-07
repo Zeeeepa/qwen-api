@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 """
 z-ai2api-python: OpenAI-compatible multi-provider AI API server

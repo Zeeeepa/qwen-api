@@ -1,8 +1,8 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 import sys
 from pathlib import Path
+
 from loguru import logger
 
 # Global logger instance

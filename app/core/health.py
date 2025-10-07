@@ -1,21 +1,20 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 """
 Health Check and Monitoring Endpoints
 """
 
-from fastapi import APIRouter, Response
-from typing import Dict, Any
 import time
+
 import psutil
+from fastapi import APIRouter, Response
 
 from app import __version__
 from app.core.config import settings
 from app.utils.flareprox_manager import get_flareprox_manager
+from app.utils.logger import get_logger
 from app.utils.request_tracker import get_request_tracker
 from app.utils.token_pool import get_token_pool
-from app.utils.logger import get_logger
 
 logger = get_logger()
 router = APIRouter()
@@ -28,7 +27,7 @@ _start_time = time.time()
 async def health_check():
     """
     Simple health check endpoint
-    
+
     Returns 200 OK if service is running
     """
     return {"status": "ok", "service": settings.SERVICE_NAME, "version": __version__}
@@ -38,13 +37,13 @@ async def health_check():
 async def detailed_health():
     """
     Detailed health check with component status
-    
+
     Returns health status for all system components
     """
     flareprox_manager = get_flareprox_manager()
     request_tracker = get_request_tracker()
     token_pool = get_token_pool()
-    
+
     health_status = {
         "status": "healthy",
         "service": settings.SERVICE_NAME,
@@ -68,14 +67,14 @@ async def detailed_health():
             }
         }
     }
-    
+
     # Determine overall health
     component_statuses = [comp["status"] for comp in health_status["components"].values()]
     if any(status == "unhealthy" for status in component_statuses):
         health_status["status"] = "unhealthy"
     elif any(status == "degraded" for status in component_statuses):
         health_status["status"] = "degraded"
-    
+
     return health_status
 
 
@@ -83,14 +82,14 @@ async def detailed_health():
 async def get_stats():
     """
     Get service statistics
-    
+
     Returns:
         Statistics for request tracking, FlareProx, token pool
     """
     flareprox_manager = get_flareprox_manager()
     request_tracker = get_request_tracker()
     token_pool = get_token_pool()
-    
+
     stats = {
         "service": {
             "name": settings.SERVICE_NAME,
@@ -113,7 +112,7 @@ async def get_stats():
             ]
         } if token_pool else {}
     }
-    
+
     return stats
 
 
@@ -121,14 +120,14 @@ async def get_stats():
 async def get_system_info():
     """
     Get system resource information
-    
+
     Returns:
         CPU, memory, disk usage
     """
     cpu_percent = psutil.cpu_percent(interval=1)
     memory = psutil.virtual_memory()
     disk = psutil.disk_usage('/')
-    
+
     return {
         "cpu": {
             "percent": cpu_percent,
@@ -153,12 +152,12 @@ async def get_system_info():
 async def get_metrics():
     """
     Get metrics in a format suitable for monitoring systems
-    
+
     Returns metrics that can be scraped by Prometheus or similar tools
     """
     request_tracker = get_request_tracker()
     stats = request_tracker.get_stats()
-    
+
     # Simple text format metrics
     metrics_text = f"""
 # HELP qwen_api_requests_total Total number of requests processed
@@ -189,7 +188,7 @@ qwen_api_success_rate {stats['success_rate']}
 # TYPE qwen_api_uptime_seconds gauge
 qwen_api_uptime_seconds {time.time() - _start_time}
     """.strip()
-    
+
     return Response(content=metrics_text, media_type="text/plain")
 
 
@@ -197,18 +196,18 @@ qwen_api_uptime_seconds {time.time() - _start_time}
 async def debug_info():
     """
     Debug information endpoint (only available in debug mode)
-    
+
     Returns detailed debugging information
     """
     if not settings.DEBUG_LOGGING:
         return {"error": "Debug mode is not enabled"}
-    
+
     request_tracker = get_request_tracker()
     flareprox_manager = get_flareprox_manager()
-    
+
     active_requests = await request_tracker.get_active_requests()
     completed_requests = await request_tracker.get_completed_requests(limit=10)
-    
+
     debug_info = {
         "config": {
             "host": settings.HOST,
@@ -229,6 +228,6 @@ async def debug_info():
             "stats": flareprox_manager.get_stats()
         }
     }
-    
+
     return debug_info
 
