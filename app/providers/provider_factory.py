@@ -27,19 +27,58 @@ class ProviderFactory:
         self._default_provider = "qwen"
 
     def _load_provider_configs(self) -> Dict[str, Dict[str, str]]:
-        """Load provider configurations from JSON file"""
+        """
+        Load provider configurations from environment variables or JSON file.
+        
+        Priority:
+        1. Environment variables (QWEN_BEARER_TOKEN - fastest)
+        2. Environment variables (QWEN_EMAIL, QWEN_PASSWORD - automated)
+        3. JSON config file (config/providers.json)
+        """
+        import os
+        
+        configs = {}
+        
+        # Check for Bearer token first (fastest method)
+        qwen_bearer_token = os.getenv("QWEN_BEARER_TOKEN")
+        
+        # Also check for email/password (fallback for automated login)
+        qwen_email = os.getenv("QWEN_EMAIL")
+        qwen_password = os.getenv("QWEN_PASSWORD")
+        
+        # If we have either bearer token OR credentials, configure Qwen
+        if qwen_bearer_token or (qwen_email and qwen_password):
+            if qwen_bearer_token:
+                logger.info("✅ Loading Qwen Bearer token from environment variables")
+            else:
+                logger.info("✅ Loading Qwen credentials from environment variables")
+                
+            configs["qwen"] = {
+                "name": "qwen",
+                "loginUrl": "https://chat.qwen.ai/auth?action=signin",
+                "chatUrl": "https://chat.qwen.ai",
+                "baseUrl": "https://chat.qwen.ai",
+                "email": qwen_email or "",
+                "password": qwen_password or "",
+                "bearer_token": qwen_bearer_token,  # Add Bearer token if provided
+                "enabled": True
+            }
+            return configs
+        
+        # Fallback to JSON file if env vars not set
         config_path = Path("config/providers.json")
         if config_path.exists():
             try:
                 with open(config_path, encoding='utf-8') as f:
                     data = json.load(f)
-                    configs = {}
                     for provider in data.get("providers", []):
                         if provider.get("enabled", True):
                             configs[provider["name"]] = provider
                     return configs
             except Exception as e:
                 logger.warning(f"Failed to load provider configs: {e}")
+        
+        logger.warning("⚠️ No Qwen credentials found in environment variables or config file")
         return {}
 
     def initialize(self):
