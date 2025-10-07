@@ -147,6 +147,10 @@ def apply_cli_overrides(args: argparse.Namespace):
     # Anonymous mode override
     if args.anonymous is not None:
         settings.ANONYMOUS_MODE = args.anonymous
+        # Anonymous mode should skip authentication
+        if args.anonymous:
+            settings.SKIP_AUTH_TOKEN = True
+            os.environ["SKIP_AUTH_TOKEN"] = "true"
         logger.info(f"📌 Anonymous mode: {'enabled' if args.anonymous else 'disabled'}")
 
 
