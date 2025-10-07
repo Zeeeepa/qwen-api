@@ -31,26 +31,36 @@ class ProviderFactory:
         Load provider configurations from environment variables or JSON file.
         
         Priority:
-        1. Environment variables (QWEN_EMAIL, QWEN_PASSWORD)
-        2. JSON config file (config/providers.json)
+        1. Environment variables (QWEN_BEARER_TOKEN - fastest)
+        2. Environment variables (QWEN_EMAIL, QWEN_PASSWORD - automated)
+        3. JSON config file (config/providers.json)
         """
         import os
         
         configs = {}
         
-        # Try loading from environment variables first
+        # Check for Bearer token first (fastest method)
+        qwen_bearer_token = os.getenv("QWEN_BEARER_TOKEN")
+        
+        # Also check for email/password (fallback for automated login)
         qwen_email = os.getenv("QWEN_EMAIL")
         qwen_password = os.getenv("QWEN_PASSWORD")
         
-        if qwen_email and qwen_password:
-            logger.info("✅ Loading Qwen credentials from environment variables")
+        # If we have either bearer token OR credentials, configure Qwen
+        if qwen_bearer_token or (qwen_email and qwen_password):
+            if qwen_bearer_token:
+                logger.info("✅ Loading Qwen Bearer token from environment variables")
+            else:
+                logger.info("✅ Loading Qwen credentials from environment variables")
+                
             configs["qwen"] = {
                 "name": "qwen",
                 "loginUrl": "https://chat.qwen.ai/auth?action=signin",
                 "chatUrl": "https://chat.qwen.ai",
                 "baseUrl": "https://chat.qwen.ai",
-                "email": qwen_email,
-                "password": qwen_password,
+                "email": qwen_email or "",
+                "password": qwen_password or "",
+                "bearer_token": qwen_bearer_token,  # Add Bearer token if provided
                 "enabled": True
             }
             return configs
