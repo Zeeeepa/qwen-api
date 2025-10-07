@@ -35,18 +35,31 @@ def parse_args() -> argparse.Namespace:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python main.py                    # Start server with default settings
-  python main.py --port 8081        # Start server on port 8081
-  python main.py --host 0.0.0.0     # Bind to all interfaces
-  python main.py --debug            # Enable debug logging
-  python main.py --no-reload        # Disable hot reload
+  # Using environment variables (recommended)
+  export QWEN_EMAIL='your@email.com'
+  export QWEN_PASSWORD='your_password'
+  python main.py
+  
+  # Using command-line arguments
+  python main.py --qwen-email your@email.com --qwen-password your_password
+  
+  # Custom port
+  python main.py --port 8081
+  
+  # Force re-authentication (clear cached token)
+  python main.py --force-reauth
+  
+  # Debug mode
+  python main.py --debug
 
 Environment Variables:
+  QWEN_EMAIL          Qwen account email (REQUIRED)
+  QWEN_PASSWORD       Qwen account password (REQUIRED)
   LISTEN_PORT         Server port (default: 8080)
   HOST                Server host (default: 0.0.0.0)
   DEBUG_LOGGING       Enable debug mode (default: false)
   FLAREPROX_ENABLED   Enable FlareProx (default: false)
-  AUTH_TOKENS_FILE    Path to tokens file
+  FORCE_REAUTH        Force re-authentication (default: false)
         """
     )
 
@@ -107,10 +120,24 @@ Environment Variables:
     )
 
     parser.add_argument(
-        "--anonymous",
-        action="store_true",
-        help="Enable anonymous mode (skip API key validation)",
+        "--qwen-email",
+        type=str,
+        help="Qwen account email (or set QWEN_EMAIL env var)",
         default=None
+    )
+
+    parser.add_argument(
+        "--qwen-password",
+        type=str,
+        help="Qwen account password (or set QWEN_PASSWORD env var)",
+        default=None
+    )
+
+    parser.add_argument(
+        "--force-reauth",
+        action="store_true",
+        help="Force re-authentication even if cached token exists",
+        default=False
     )
 
     return parser.parse_args()
@@ -144,14 +171,19 @@ def apply_cli_overrides(args: argparse.Namespace):
         os.environ["FLAREPROX_ENABLED"] = "true" if args.flareprox else "false"
         logger.info(f"📌 FlareProx: {'enabled' if args.flareprox else 'disabled'}")
 
-    # Anonymous mode override
-    if args.anonymous is not None:
-        settings.ANONYMOUS_MODE = args.anonymous
-        # Anonymous mode should skip authentication
-        if args.anonymous:
-            settings.SKIP_AUTH_TOKEN = True
-            os.environ["SKIP_AUTH_TOKEN"] = "true"
-        logger.info(f"📌 Anonymous mode: {'enabled' if args.anonymous else 'disabled'}")
+    # Qwen credentials override
+    if args.qwen_email is not None:
+        os.environ["QWEN_EMAIL"] = args.qwen_email
+        logger.info(f"📌 Qwen email: {args.qwen_email}")
+    
+    if args.qwen_password is not None:
+        os.environ["QWEN_PASSWORD"] = args.qwen_password
+        logger.info(f"📌 Qwen password: {'*' * len(args.qwen_password)}")
+    
+    # Force reauth flag
+    if args.force_reauth:
+        os.environ["FORCE_REAUTH"] = "true"
+        logger.info(f"📌 Force re-authentication: enabled")
 
 
 def validate_configuration() -> bool:
@@ -183,13 +215,69 @@ def validate_configuration() -> bool:
     return True
 
 
+async def ensure_qwen_authentication() -> str:
+    """
+    Ensure we have valid Qwen authentication token
+    
+    Returns:
+        Valid Bearer token
+    """
+    from app.auth.token_manager import get_or_create_token
+    
+    logger.info("=" * 70)
+    logger.info("🔐 Qwen Authentication Check")
+    logger.info("=" * 70)
+    
+    # Get credentials from environment
+    email = os.getenv("QWEN_EMAIL")
+    password = os.getenv("QWEN_PASSWORD")
+    force_reauth = os.getenv("FORCE_REAUTH", "false").lower() == "true"
+    
+    try:
+        # Get or create token
+        token = await get_or_create_token(
+            email=email,
+            password=password,
+            force_new=force_reauth
+        )
+        
+        logger.success("✅ Qwen authentication successful!")
+        logger.info(f"📝 Token: {token[:30]}...{token[-10:]}")
+        logger.info("=" * 70)
+        
+        # Store token in environment for provider to use
+        os.environ["QWEN_BEARER_TOKEN"] = token
+        
+        return token
+        
+    except ValueError as e:
+        logger.error("=" * 70)
+        logger.error("❌ Qwen Authentication Required!")
+        logger.error("=" * 70)
+        logger.error(str(e))
+        logger.error("")
+        logger.error("Please provide Qwen credentials:")
+        logger.error("  1. Set environment variables:")
+        logger.error("     export QWEN_EMAIL='your@email.com'")
+        logger.error("     export QWEN_PASSWORD='your_password'")
+        logger.error("")
+        logger.error("  2. Or use command-line arguments:")
+        logger.error("     python main.py --qwen-email your@email.com --qwen-password your_password")
+        logger.error("=" * 70)
+        raise
+    except Exception as e:
+        logger.error("=" * 70)
+        logger.error(f"❌ Authentication failed: {e}")
+        logger.error("=" * 70)
+        raise
+
+
 def print_startup_info():
     """Print startup information"""
     logger.info("=" * 70)
     logger.info(f"🚀 Starting {settings.SERVICE_NAME}")
     logger.info(f"📡 Server: http://{settings.HOST}:{settings.LISTEN_PORT}")
     logger.info(f"🔧 Debug Mode: {'ON' if settings.DEBUG_LOGGING else 'OFF'}")
-    logger.info(f"🔐 Anonymous Mode: {'ON' if settings.ANONYMOUS_MODE else 'OFF'}")
 
     # FlareProx status
     flareprox_enabled = os.getenv("FLAREPROX_ENABLED", "false").lower() == "true"
@@ -205,6 +293,8 @@ def print_startup_info():
 
 def main():
     """Main entry point for CLI"""
+    import asyncio
+    
     try:
         # Print banner
         print_banner()
@@ -218,6 +308,13 @@ def main():
         # Validate configuration
         if not validate_configuration():
             logger.error("❌ Server startup aborted due to configuration errors")
+            sys.exit(1)
+
+        # ⚠️ CRITICAL: Ensure Qwen authentication before starting server
+        try:
+            asyncio.run(ensure_qwen_authentication())
+        except Exception as e:
+            logger.error("❌ Authentication failed - cannot start server without valid Qwen credentials")
             sys.exit(1)
 
         # Print startup info
