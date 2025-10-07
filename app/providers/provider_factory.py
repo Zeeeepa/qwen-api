@@ -13,9 +13,7 @@ from typing import Any, AsyncGenerator, Dict, List, Optional, Union
 from app.core.config import settings
 from app.models.schemas import OpenAIRequest
 from app.providers.base import BaseProvider, provider_registry
-from app.providers.k2think_provider import K2ThinkProvider
 from app.providers.qwen_provider import QwenProvider
-from app.providers.zai_provider import ZAIProvider
 from app.utils.logger import get_logger
 
 logger = get_logger()
@@ -26,7 +24,7 @@ class ProviderFactory:
 
     def __init__(self):
         self._initialized = False
-        self._default_provider = "zai"
+        self._default_provider = "qwen"
 
     def _load_provider_configs(self) -> Dict[str, Dict[str, str]]:
         """Load provider configurations from JSON file"""
@@ -53,21 +51,7 @@ class ProviderFactory:
             # Load provider configurations
             provider_configs = self._load_provider_configs()
 
-            # 注册 Z.AI 提供商
-            zai_provider = ZAIProvider()
-            provider_registry.register(
-                zai_provider,
-                zai_provider.get_supported_models()
-            )
-
-            # 注册 K2Think 提供商
-            k2think_provider = K2ThinkProvider()
-            provider_registry.register(
-                k2think_provider,
-                k2think_provider.get_supported_models()
-            )
-
-            # 注册 Qwen 提供商（如果配置存在）
+            # 注册 Qwen 提供商（主要提供商）
             qwen_config = provider_configs.get("qwen")
             if qwen_config:
                 logger.info("🔐 Initializing Qwen provider with authentication")
@@ -82,10 +66,10 @@ class ProviderFactory:
             )
 
             self._initialized = True
-            logger.info(f"✅ Initialized {len(provider_registry.list_providers())} providers")
+            logger.info(f"✅ Initialized {len(provider_registry.list_providers())} providers (Qwen only)")
 
         except Exception as e:
-            logger.error(f"❌ 提供商工厂初始化失败: {e}")
+            logger.error(f"❌ Provider factory initialization failed: {e}")
             raise
 
     def get_provider_for_model(self, model: str) -> Optional[BaseProvider]:

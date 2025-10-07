@@ -6,7 +6,6 @@
 """
 
 from app.providers.base import BaseProvider, ProviderConfig, provider_registry
-from app.providers.k2think_provider import K2ThinkProvider
 from app.providers.provider_factory import (
     ProviderFactory,
     ProviderRouter,
@@ -14,14 +13,11 @@ from app.providers.provider_factory import (
     initialize_providers,
 )
 from app.providers.qwen_provider import QwenProvider
-from app.providers.zai_provider import ZAIProvider
 
 __all__ = [
     "BaseProvider",
     "ProviderConfig",
     "provider_registry",
-    "ZAIProvider",
-    "K2ThinkProvider",
     "QwenProvider",
     "ProviderFactory",
     "ProviderRouter",

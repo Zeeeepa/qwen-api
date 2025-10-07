@@ -64,11 +64,11 @@ Environment Variables:
     )
 
     parser.add_argument(
-        "-h", "--host",
+        "--host",
         type=str,
         help=f"Server host (default: {settings.HOST})",
         default=None,
-        dest="host_arg"  # Avoid conflict with built-in -h/--help
+        dest="host_arg"
     )
 
     parser.add_argument(
@@ -235,4 +235,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
