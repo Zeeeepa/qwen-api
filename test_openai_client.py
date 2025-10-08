@@ -2,14 +2,35 @@
 """
 Test OpenAI API compatibility with Qwen API Server
 """
+import os
 from openai import OpenAI
 
 print("🧪 Testing Qwen API via OpenAI client...")
 print()
 
+# Get Bearer token from environment (set by server startup)
+bearer_token = os.getenv("QWEN_BEARER_TOKEN", "")
+if not bearer_token:
+    # Try to read from server log
+    try:
+        with open("/tmp/server.log", "r") as f:
+            for line in f:
+                if "📝 Token:" in line:
+                    bearer_token = line.split("Token:")[1].strip()
+                    break
+    except:
+        pass
+
+if not bearer_token:
+    print("❌ No QWEN_BEARER_TOKEN found. Please set it or start the server first.")
+    exit(1)
+
+print(f"🔑 Using token: {bearer_token[:50]}...")
+print()
+
 # Initialize client pointing to local Qwen API server
 client = OpenAI(
-    api_key="sk-test-key",  # Any key in anonymous mode
+    api_key=bearer_token,  # Use actual compressed token
     base_url="http://localhost:8080/v1"  # Note: /v1 base path
 )
 
@@ -52,4 +73,3 @@ except Exception as e:
     print(f"   Message: {str(e)}")
     import traceback
     traceback.print_exc()
-
