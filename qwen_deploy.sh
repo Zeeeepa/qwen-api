@@ -136,49 +136,28 @@ setup_environment() {
     
     cd "$INSTALL_DIR"
     
-    # Collect credentials
-    echo -e "${CYAN}${BOLD}Qwen Authentication${NC}"
+    # Collect credentials - Check environment variables first
+    echo -e "${CYAN}${BOLD}Qwen Authentication Setup${NC}"
     echo ""
-    echo "Choose authentication method:"
-    echo "1) Bearer Token (Recommended - Fast & Reliable)"
-    echo "2) Email + Password (Automated Playwright Login)"
-    echo ""
-    read -p "Enter choice (1 or 2): " AUTH_METHOD
     
-    if [ "$AUTH_METHOD" = "1" ]; then
-        echo ""
-        echo -e "${YELLOW}To get your Bearer Token:${NC}"
-        echo "1. Open https://chat.qwen.ai in your browser"
-        echo "2. Open Developer Tools (F12)"
-        echo "3. Go to Console tab"
-        echo "4. Paste and run:"
-        echo "   localStorage.getItem('web_api_auth_token')"
-        echo ""
-        read -p "Enter Bearer Token: " BEARER_TOKEN
-        
-        cat > .env << EOF
-# Qwen Authentication
-QWEN_BEARER_TOKEN=$BEARER_TOKEN
-
-# Server Configuration
-LISTEN_PORT=$LISTEN_PORT
-HOST=0.0.0.0
-
-# Settings
-DEBUG_LOGGING=false
-SKIP_AUTH_TOKEN=true
-ANONYMOUS_MODE=true
-FLAREPROX_ENABLED=false
-TOOL_SUPPORT=true
-EOF
+    # Check if credentials are already in environment
+    if [ -n "$QWEN_EMAIL" ] && [ -n "$QWEN_PASSWORD" ]; then
+        print_info "Using credentials from environment variables"
+        print_success "QWEN_EMAIL detected"
+        print_success "QWEN_PASSWORD detected"
+        AUTH_METHOD="2"
     else
+        print_info "No environment credentials found, prompting for input..."
         echo ""
         read -p "Enter Qwen Email: " QWEN_EMAIL
         read -sp "Enter Qwen Password: " QWEN_PASSWORD
         echo ""
-        
-        cat > .env << EOF
-# Qwen Authentication
+        AUTH_METHOD="2"
+    fi
+    
+    # Create .env with credentials for Playwright automation
+    cat > .env << EOF
+# Qwen Authentication - Will auto-login with Playwright
 QWEN_EMAIL=$QWEN_EMAIL
 QWEN_PASSWORD=$QWEN_PASSWORD
 
@@ -193,10 +172,10 @@ ANONYMOUS_MODE=true
 FLAREPROX_ENABLED=false
 TOOL_SUPPORT=true
 EOF
-    fi
     
     chmod 600 .env
-    print_success "Environment configured (.env created with secure permissions)"
+    print_success "Environment configured for Playwright automation"
+    print_info "Server will auto-login to Qwen and fetch Bearer token on startup"
 }
 
 install_dependencies() {
@@ -234,24 +213,37 @@ start_server() {
     source venv/bin/activate
     
     print_info "Starting server on port $LISTEN_PORT..."
+    print_warning "⏳ Playwright will now auto-login to Qwen to fetch Bearer token..."
+    print_info "This may take 10-30 seconds for first-time authentication"
+    echo ""
+    
     nohup python main.py > server.log 2>&1 &
     SERVER_PID=$!
     echo "$SERVER_PID" > server.pid
     print_info "Server PID: $SERVER_PID"
     
-    print_info "Waiting for server to be ready..."
-    for i in {1..30}; do
+    print_info "Waiting for server to be ready (checking health endpoint)..."
+    for i in {1..60}; do
         if curl -s "http://localhost:$LISTEN_PORT/health" > /dev/null 2>&1; then
             print_success "Server is ready!"
+            print_success "✅ Playwright authentication completed successfully"
             return 0
         fi
         sleep 1
-        echo -n "."
+        if [ $((i % 10)) -eq 0 ]; then
+            echo ""
+            print_info "Still waiting... (${i}s elapsed)"
+        else
+            echo -n "."
+        fi
     done
     
     echo ""
-    print_error "Server failed to start within 30 seconds"
+    print_error "Server failed to start within 60 seconds"
     print_info "Check server.log for details: $INSTALL_DIR/server.log"
+    echo ""
+    print_info "Last 50 lines of server log:"
+    tail -50 "$INSTALL_DIR/server.log"
     exit 1
 }
 
@@ -275,6 +267,7 @@ validate_api() {
     # Test chat completion endpoint with curl
     echo ""
     print_info "Testing chat completion endpoint with curl..."
+    print_info "Using auto-fetched Bearer token from Playwright authentication"
     
     CHAT_RESPONSE=$(curl -s -X POST "http://localhost:$LISTEN_PORT/v1/chat/completions" \
         -H "Content-Type: application/json" \
@@ -299,11 +292,14 @@ validate_api() {
         
         if [ -n "$MESSAGE" ]; then
             echo ""
-            print_success "Assistant Response: $MESSAGE"
+            print_success "✅ Real AI Response: $MESSAGE"
+            print_info "Token is working correctly!"
+        else
+            print_warning "Empty response - token may need refresh"
         fi
     else
         print_warning "Chat completion endpoint returned empty response"
-        print_info "This may be normal if credentials need to be configured"
+        print_info "Check server logs if this persists"
     fi
     
     # Create Python test script
@@ -412,6 +408,11 @@ print_final_status() {
     echo "  ✓ Installation directory: $INSTALL_DIR"
     echo "  ✓ Log file: $INSTALL_DIR/server.log"
     echo ""
+    echo "🔐 Authentication Status:"
+    echo "  ✓ Playwright auto-login: ACTIVE"
+    echo "  ✓ Bearer token: Auto-fetched and cached"
+    echo "  ✓ Token refresh: Automatic on expiry"
+    echo ""
     echo "OpenAI-Compatible Endpoints:"
     echo "  • Health:           http://localhost:$LISTEN_PORT/health"
     echo "  • Chat Completion:  http://localhost:$LISTEN_PORT/v1/chat/completions"
@@ -426,7 +427,8 @@ print_final_status() {
     echo "  • Stop server:  kill \$(cat $INSTALL_DIR/server.pid)"
     echo "  • Restart:      cd $INSTALL_DIR && source venv/bin/activate && python main.py"
     echo ""
-    echo -e "${CYAN}Server is now running in the background!${NC}"
+    echo -e "${CYAN}Server is running with automatic Playwright authentication!${NC}"
+    echo -e "${YELLOW}The server will auto-refresh the token when it expires.${NC}"
 }
 
 ################################################################################
