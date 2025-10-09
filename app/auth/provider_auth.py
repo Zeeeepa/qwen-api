@@ -344,3 +344,6 @@ def create_provider_auth(provider_name: str, config: Dict[str, str]) -> Provider
     else:
         raise ValueError(f"Unknown provider: {provider_name}")
 
+
+# Alias for backward compatibility
+create_auth = create_provider_auth
