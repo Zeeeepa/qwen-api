@@ -272,9 +272,9 @@ validate_api() {
         print_warning "Health endpoint returned empty response"
     fi
     
-    # Test chat completion endpoint
+    # Test chat completion endpoint with curl
     echo ""
-    print_info "Testing chat completion endpoint..."
+    print_info "Testing chat completion endpoint with curl..."
     
     CHAT_RESPONSE=$(curl -s -X POST "http://localhost:$LISTEN_PORT/v1/chat/completions" \
         -H "Content-Type: application/json" \
@@ -305,6 +305,95 @@ validate_api() {
         print_warning "Chat completion endpoint returned empty response"
         print_info "This may be normal if credentials need to be configured"
     fi
+    
+    # Create Python test script
+    echo ""
+    print_info "Creating Python test script (test_api.py)..."
+    
+    cat > test_api.py << 'PYTHON_EOF'
+#!/usr/bin/env python3
+"""
+Test script for Qwen API using OpenAI Python client
+"""
+from openai import OpenAI
+
+# Initialize client with local Qwen API
+client = OpenAI(
+    base_url="http://localhost:PORT_PLACEHOLDER/v1",
+    api_key="sk-test"  # Required by OpenAI client but not validated when SKIP_AUTH_TOKEN=true
+)
+
+print("=" * 60)
+print("Testing Qwen API with OpenAI Python Client")
+print("=" * 60)
+print()
+
+# Test chat completion
+print("Sending request to chat completion endpoint...")
+print("Model: qwen-turbo")
+print("Prompt: What is your model name?")
+print()
+
+try:
+    response = client.chat.completions.create(
+        model="qwen-turbo",
+        messages=[
+            {"role": "user", "content": "What is your model name?"}
+        ],
+        max_tokens=100
+    )
+    
+    print("✓ Response received!")
+    print()
+    print("=" * 60)
+    print("Full Response Object:")
+    print("=" * 60)
+    print(response)
+    print()
+    print("=" * 60)
+    print("Assistant Message:")
+    print("=" * 60)
+    print(response.choices[0].message.content)
+    print()
+    print("=" * 60)
+    print("Response Metadata:")
+    print("=" * 60)
+    print(f"  ID: {response.id}")
+    print(f"  Model: {response.model}")
+    print(f"  Finish Reason: {response.choices[0].finish_reason}")
+    print(f"  Tokens Used: {response.usage.total_tokens if response.usage else 'N/A'}")
+    print("=" * 60)
+
+except Exception as e:
+    print(f"✗ Error: {e}")
+    import traceback
+    traceback.print_exc()
+PYTHON_EOF
+    
+    # Replace port placeholder
+    sed -i "s/PORT_PLACEHOLDER/$LISTEN_PORT/g" test_api.py
+    chmod +x test_api.py
+    
+    print_success "Test script created: test_api.py"
+    
+    # Run the Python test
+    echo ""
+    print_info "Running Python OpenAI client test..."
+    separator
+    echo ""
+    
+    source venv/bin/activate
+    
+    # Install openai package if not present
+    if ! python3 -c "import openai" 2>/dev/null; then
+        print_info "Installing openai package..."
+        pip install openai > /dev/null 2>&1
+        print_success "openai package installed"
+        echo ""
+    fi
+    
+    # Run the test
+    python3 test_api.py || print_warning "Python test encountered an error"
 }
 
 print_final_status() {
@@ -327,6 +416,10 @@ print_final_status() {
     echo "  • Health:           http://localhost:$LISTEN_PORT/health"
     echo "  • Chat Completion:  http://localhost:$LISTEN_PORT/v1/chat/completions"
     echo "  • Models:           http://localhost:$LISTEN_PORT/v1/models"
+    echo ""
+    echo "Test Scripts Created:"
+    echo "  • Python test:  $INSTALL_DIR/test_api.py"
+    echo "  • Run test:     cd $INSTALL_DIR && source venv/bin/activate && python test_api.py"
     echo ""
     echo "Management Commands:"
     echo "  • View logs:    tail -f $INSTALL_DIR/server.log"
@@ -359,4 +452,3 @@ main() {
 
 # Run main function
 main
-
