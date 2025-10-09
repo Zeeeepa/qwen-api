@@ -202,6 +202,14 @@ install_dependencies() {
         print_error "Failed to install dependencies"
         exit 1
     fi
+    
+    # Install Playwright browsers (CRITICAL for authentication)
+    print_info "Installing Playwright browsers (required for authentication)..."
+    if playwright install chromium > /dev/null 2>&1; then
+        print_success "Playwright browsers installed successfully"
+    else
+        print_warning "Playwright browser installation may have failed, but continuing..."
+    fi
 }
 
 start_server() {
