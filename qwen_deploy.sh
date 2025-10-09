@@ -203,10 +203,16 @@ install_dependencies() {
         exit 1
     fi
     
-    # Install Playwright browsers (CRITICAL for authentication)
+    # Install Playwright browsers and system dependencies (CRITICAL for authentication)
+    print_info "Installing Playwright system dependencies..."
+    if command -v apt-get &> /dev/null; then
+        # Debian/Ubuntu systems
+        playwright install-deps chromium > /dev/null 2>&1 || print_warning "System deps install may have failed"
+    fi
+    
     print_info "Installing Playwright browsers (required for authentication)..."
     if playwright install chromium > /dev/null 2>&1; then
-        print_success "Playwright browsers installed successfully"
+        print_success "Playwright browsers and dependencies installed successfully"
     else
         print_warning "Playwright browser installation may have failed, but continuing..."
     fi
