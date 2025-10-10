@@ -261,15 +261,22 @@ class QwenAuth(ProviderAuth):
                 logger.debug("🔑 Qwen: Extracting localStorage token")
                 web_api_token = None
 
-                for attempt in range(3):
+                # Wait longer after login for token to be set
+                await asyncio.sleep(3)
+                
+                for attempt in range(10):
                     web_api_token = await page.evaluate('''() => {
-                        return localStorage.getItem('web_api_auth_token');
+                        // Try the actual token name used by Qwen
+                        return localStorage.getItem('token') 
+                            || localStorage.getItem('web_api_auth_token')
+                            || localStorage.getItem('access_token')
+                            || localStorage.getItem('auth_token');
                     }''')
                     if web_api_token:
                         logger.info(f"✅ Qwen: Found web_api_token on attempt {attempt + 1}")
                         break
-                    logger.debug(f"⏳ Qwen: Attempt {attempt + 1}/3 - waiting for token...")
-                    await asyncio.sleep(1)
+                    logger.debug(f"⏳ Qwen: Attempt {attempt + 1}/10 - waiting for token...")
+                    await asyncio.sleep(2)
 
                 # Extract cookies
                 logger.debug("🍪 Qwen: Extracting cookies")
@@ -297,7 +304,7 @@ class QwenAuth(ProviderAuth):
                 else:
                     logger.warning("⚠️ Qwen: Missing credentials for Bearer token")
                     if not web_api_token:
-                        logger.error("❌ Qwen: web_api_auth_token not found in localStorage")
+                        logger.error("❌ Qwen: 'token' not found in localStorage (checked: token, web_api_auth_token, access_token, auth_token)")
                     if not ssxmod_itna:
                         logger.error("❌ Qwen: ssxmod_itna cookie not found")
 
