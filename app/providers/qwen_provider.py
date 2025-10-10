@@ -1111,12 +1111,23 @@ class QwenProvider(BaseProvider):
                     image_url=image_url
                 )
         else:
-            # Standard text-to-text chat
+            # Standard text-to-text chat - CREATE CHAT SESSION FIRST!
+            logger.info(f"Creating chat session for {chat_type}")
+            chat_id = await self.create_chat_session(request.model, "normal")
+
+            if not chat_id:
+                raise ValueError(f"Failed to create chat session for {chat_type}")
+
+            # Build text chat request with real chat_id
             body = self.builder.build_text_chat_request(
                 model=request.model,
                 messages=messages_list,
                 stream=request.stream if request.stream is not None else True
             )
+            
+            # Override generated UUIDs with real chat_id
+            body["chat_id"] = chat_id
+            logger.info(f"✅ Using real chat_id: {chat_id}")
 
             # Add optional OpenAI parameters if provided
             if request.temperature is not None:
@@ -1144,8 +1155,14 @@ class QwenProvider(BaseProvider):
         # Get auth headers
         headers = await self.get_auth_headers()
 
+        # Build URL with chat_id as query parameter
+        url = self.CHAT_COMPLETIONS_URL
+        if "chat_id" in body:
+            url = f"{self.CHAT_COMPLETIONS_URL}?chat_id={body['chat_id']}"
+            logger.info(f"🔗 Using URL with chat_id query param: {url}")
+        
         return {
-            "url": self.CHAT_COMPLETIONS_URL,
+            "url": url,
             "headers": headers,
             "body": body,
             "model": request.model,
