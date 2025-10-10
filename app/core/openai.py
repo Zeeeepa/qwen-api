@@ -274,3 +274,60 @@ async def update_token_pool_endpoint(tokens: List[str]):
     except Exception as e:
         logger.error(f"更新token池失败: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to update token pool: {str(e)}")
+
+
+@router.delete("/v1/chats/delete")
+@router.post("/v1/chats/delete")
+async def delete_all_chats(authorization: str = Header(...)):
+    """
+    Delete all chat history from Qwen
+    
+    Supports both DELETE and POST methods for compatibility.
+    Requires Bearer token authentication.
+    """
+    import httpx
+    
+    try:
+        # Validate authorization header
+        if not authorization.startswith("Bearer "):
+            raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+        
+        token = authorization[7:]  # Extract token after "Bearer "
+        
+        # Call Qwen's delete chats API
+        delete_url = "https://chat.qwen.ai/api/v2/chats"
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "Origin": "https://chat.qwen.ai",
+            "Referer": "https://chat.qwen.ai/chat"
+        }
+        
+        logger.info("🗑️ Deleting all chats from Qwen...")
+        
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.delete(delete_url, headers=headers)
+            
+            if response.status_code == 200:
+                data = response.json()
+                logger.info("✅ Chats deleted successfully")
+                return {
+                    "success": True,
+                    "message": "All chats deleted successfully",
+                    "data": data
+                }
+            else:
+                error_text = response.text
+                logger.error(f"❌ Failed to delete chats: {response.status_code} - {error_text}")
+                raise HTTPException(
+                    status_code=response.status_code,
+                    detail=f"Failed to delete chats: {error_text}"
+                )
+                
+    except httpx.HTTPError as e:
+        logger.error(f"❌ HTTP error during chat deletion: {e}")
+        raise HTTPException(status_code=500, detail=f"HTTP error: {str(e)}")
+    except Exception as e:
+        logger.error(f"❌ Error deleting chats: {e}")
+        raise HTTPException(status_code=500, detail=f"Error deleting chats: {str(e)}")

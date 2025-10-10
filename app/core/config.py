@@ -14,6 +14,14 @@ class Settings(BaseSettings):
     # API Configuration
     API_ENDPOINT: str = "https://chat.qwen.ai/api/chat/completions"
     AUTH_TOKEN: str = os.getenv("AUTH_TOKEN", "sk-your-api-key")
+    
+    # Qwen Provider Credentials (Optional - for automated login)
+    QWEN_EMAIL: Optional[str] = None
+    QWEN_PASSWORD: Optional[str] = None
+    QWEN_BEARER_TOKEN: Optional[str] = None
+    
+    # FlareProx Configuration (Optional)
+    FLAREPROX_ENABLED: bool = False
 
     # 认证token文件路径（可选）
     AUTH_TOKENS_FILE: Optional[str] = os.getenv("AUTH_TOKENS_FILE")
