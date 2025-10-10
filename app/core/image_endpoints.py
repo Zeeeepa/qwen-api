@@ -71,7 +71,7 @@ async def generate_images(request: ImageGenerationRequest, authorization: str = 
 
         # Get provider
         provider_router = get_provider_router()
-        provider = provider_router._get_provider_for_model(request.model or "qwen-max-image")
+        provider = provider_router.factory.get_provider_for_model(request.model or "qwen-max-image")
 
         if not provider:
             raise HTTPException(status_code=404, detail=f"Provider not found for model: {request.model}")
@@ -115,7 +115,7 @@ async def edit_images(request: ImageEditRequest, authorization: str = Header(...
 
         # Get provider
         provider_router = get_provider_router()
-        provider = provider_router._get_provider_for_model(request.model or "qwen-max-image_edit")
+        provider = provider_router.factory.get_provider_for_model(request.model or "qwen-max-image_edit")
 
         if not provider:
             raise HTTPException(status_code=404, detail=f"Provider not found for model: {request.model}")
@@ -161,7 +161,7 @@ async def generate_videos(request: VideoGenerationRequest, authorization: str = 
 
         # Get provider
         provider_router = get_provider_router()
-        provider = provider_router._get_provider_for_model(request.model or "qwen-max-video")
+        provider = provider_router.factory.get_provider_for_model(request.model or "qwen-max-video")
 
         if not provider:
             raise HTTPException(status_code=404, detail=f"Provider not found for model: {request.model}")
@@ -212,7 +212,7 @@ async def deep_research(request: DeepResearchRequest, authorization: str = Heade
 
         # Get provider
         provider_router = get_provider_router()
-        provider = provider_router._get_provider_for_model(request.model or "qwen-max-deep-research")
+        provider = provider_router.factory.get_provider_for_model(request.model or "qwen-max-deep-research")
 
         if not provider:
             raise HTTPException(status_code=404, detail=f"Provider not found for model: {request.model}")
