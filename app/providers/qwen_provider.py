@@ -1173,6 +1173,7 @@ class QwenProvider(BaseProvider):
         if isinstance(response, httpx.Response):
             try:
                 data = response.json()
+                logger.debug(f"🔍 Raw Qwen API response: {json.dumps(data, ensure_ascii=False, indent=2)}")
 
                 # Extract content from various possible locations
                 content = ""
