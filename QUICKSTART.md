@@ -192,7 +192,7 @@ tail -50 qwen-api-deployment/server.log | grep -A 5 "Raw Qwen"
 
 ### Custom Port
 ```bash
-PORT=3000 curl -fsSL https://raw.githubusercontent.com/Zeeeepa/qwen-api/main/quick_deploy.sh | bash
+LISTEN_PORT=3000 curl -fsSL https://raw.githubusercontent.com/Zeeeepa/qwen-api/main/quick_deploy.sh | bash
 ```
 
 ### Specific Branch
@@ -226,4 +226,3 @@ MIT License - See LICENSE file for details
 **Made with ❤️ for the AI community**
 
 Repository: https://github.com/Zeeeepa/qwen-api
-

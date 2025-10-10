@@ -23,7 +23,7 @@ NC='\033[0m' # No Color
 REPO_URL="https://github.com/Zeeeepa/qwen-api.git"
 BRANCH="${1:-main}"
 DEPLOY_DIR="qwen-api-deployment"
-PORT="${PORT:-8096}"
+LISTEN_PORT="${LISTEN_PORT:-8096}"
 
 # Function: Print colored message
 print_msg() {
@@ -157,16 +157,14 @@ QWEN_EMAIL=$QWEN_EMAIL
 QWEN_PASSWORD=$QWEN_PASSWORD
 
 # Server Configuration
-PORT=$PORT
+LISTEN_PORT=$LISTEN_PORT
 HOST=0.0.0.0
-
-# Optional: Set log level (DEBUG, INFO, WARNING, ERROR)
-LOG_LEVEL=INFO
+DEBUG_LOGGING=true
 EOF
     
     print_msg "$GREEN" "✅ Environment configured"
     print_msg "$BLUE" "   Email: $QWEN_EMAIL"
-    print_msg "$BLUE" "   Port:  $PORT"
+    print_msg "$BLUE" "   Port:  $LISTEN_PORT"
 }
 
 # Function: Start server
@@ -192,7 +190,7 @@ start_server() {
     sleep 5
     
     # Check if server is running
-    if ! curl -s http://localhost:$PORT/health > /dev/null; then
+    if ! curl -s http://localhost:$LISTEN_PORT/health > /dev/null; then
         print_msg "$RED" "❌ Server failed to start"
         print_msg "$YELLOW" "Check server.log for details:"
         tail -20 server.log
@@ -209,9 +207,9 @@ validate_api() {
     print_msg "$BLUE" "Making test API call..."
     
     # Make API request
-    RESPONSE=$(curl -s -X POST "http://localhost:$PORT/v1/chat/completions" \
+    RESPONSE=$(curl -s -X POST "http://localhost:$LISTEN_PORT/v1/chat/completions" \
         -H "Content-Type: application/json" \
-        -H "Authorization: Bearer test" \
+        -H "Authorization: Bearer sk-your-api-key" \
         -d '{
             "model": "qwen-turbo",
             "messages": [{"role": "user", "content": "Say \"Hello World\""}],
@@ -254,15 +252,15 @@ ${GREEN}✅ Qwen API is now running!${NC}
 
 ${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}
 ${GREEN}API Endpoint:${NC}
-  http://localhost:$PORT
+  http://localhost:$LISTEN_PORT
 
 ${GREEN}Health Check:${NC}
-  curl http://localhost:$PORT/health
+  curl http://localhost:$LISTEN_PORT/health
 
 ${GREEN}Example API Call:${NC}
-  curl -X POST http://localhost:$PORT/v1/chat/completions \\
+  curl -X POST http://localhost:$LISTEN_PORT/v1/chat/completions \\
     -H "Content-Type: application/json" \\
-    -H "Authorization: Bearer test" \\
+    -H "Authorization: Bearer sk-your-api-key" \\
     -d '{
       "model": "qwen-turbo",
       "messages": [{"role": "user", "content": "Hello!"}],
@@ -324,4 +322,3 @@ main() {
 
 # Run main function
 main
-
