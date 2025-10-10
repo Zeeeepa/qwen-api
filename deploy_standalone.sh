@@ -1,0 +1,327 @@
+#!/usr/bin/env bash
+
+#############################################################################
+# Qwen API - Single Command Deployment Script
+# 
+# Usage: 
+#   QWEN_EMAIL=your@email.com QWEN_PASSWORD=yourpass bash deploy_standalone.sh
+#
+# Or with all options:
+#   QWEN_EMAIL=your@email.com \
+#   QWEN_PASSWORD=yourpass \
+#   LISTEN_PORT=8080 \
+#   FLAREPROX_ENABLED=false \
+#   bash deploy_standalone.sh
+#############################################################################
+
+set -e
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+BOLD='\033[1m'
+NC='\033[0m'
+
+# Configuration
+REPO_URL="https://github.com/Zeeeepa/qwen-api.git"
+INSTALL_DIR="${INSTALL_DIR:-$HOME/qwen-api}"
+LISTEN_PORT="${LISTEN_PORT:-8080}"
+FLAREPROX_ENABLED="${FLAREPROX_ENABLED:-false}"
+
+# Banner
+clear
+echo -e "${CYAN}${BOLD}"
+echo "╔═══════════════════════════════════════════════════════╗"
+echo "║                                                       ║"
+echo "║   Qwen API - Single Command Deployment               ║"
+echo "║   OpenAI-Compatible Multi-Provider Gateway           ║"
+echo "║                                                       ║"
+echo "╚═══════════════════════════════════════════════════════╝"
+echo -e "${NC}"
+
+# Check required environment variables
+if [ -z "$QWEN_EMAIL" ] || [ -z "$QWEN_PASSWORD" ]; then
+    echo -e "${RED}✗${NC} Error: Required environment variables not set"
+    echo ""
+    echo "Usage:"
+    echo "  QWEN_EMAIL=your@email.com QWEN_PASSWORD=yourpass bash $0"
+    echo ""
+    echo "Optional variables:"
+    echo "  LISTEN_PORT=8080           (default: 8080)"
+    echo "  FLAREPROX_ENABLED=false    (default: false)"
+    echo "  INSTALL_DIR=$HOME/qwen-api (default)"
+    echo ""
+    exit 1
+fi
+
+# Validate email format
+if ! [[ "$QWEN_EMAIL" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; then
+    echo -e "${RED}✗${NC} Invalid email format: $QWEN_EMAIL"
+    exit 1
+fi
+
+echo -e "${CYAN}ℹ${NC}  Configuration:"
+echo "  Email: $QWEN_EMAIL"
+echo "  Port: $LISTEN_PORT"
+echo "  Install Dir: $INSTALL_DIR"
+echo "  FlareProx: $FLAREPROX_ENABLED"
+echo ""
+
+# Step 1: Check Prerequisites
+echo -e "${BLUE}═══════════════════════════════════════════════════════${NC}"
+echo -e "${CYAN}${BOLD}  Step 1/6: Checking Prerequisites${NC}"
+echo -e "${BLUE}═══════════════════════════════════════════════════════${NC}"
+echo ""
+
+# Check Python
+if ! command -v python3 &>/dev/null; then
+    echo -e "${RED}✗${NC} Python 3 not found. Please install Python 3.10+"
+    exit 1
+fi
+
+python_version=$(python3 --version 2>&1 | awk '{print $2}')
+major=$(echo "$python_version" | cut -d. -f1)
+minor=$(echo "$python_version" | cut -d. -f2)
+
+if [ "$major" -lt 3 ] || ([ "$major" -eq 3 ] && [ "$minor" -lt 10 ]); then
+    echo -e "${RED}✗${NC} Python 3.10+ required (found: $python_version)"
+    exit 1
+fi
+
+echo -e "${GREEN}✓${NC} ${BOLD}Python installed: $python_version${NC}"
+
+# Check Git
+if ! command -v git &>/dev/null; then
+    echo -e "${RED}✗${NC} Git not found. Please install git"
+    exit 1
+fi
+echo -e "${GREEN}✓${NC} ${BOLD}Git installed${NC}"
+
+# Check pip
+if ! command -v pip3 &>/dev/null; then
+    echo -e "${RED}✗${NC} pip3 not found. Please install pip3"
+    exit 1
+fi
+echo -e "${GREEN}✓${NC} ${BOLD}pip3 installed${NC}"
+
+# Check curl
+if ! command -v curl &>/dev/null; then
+    echo -e "${RED}✗${NC} curl not found. Please install curl"
+    exit 1
+fi
+echo -e "${GREEN}✓${NC} ${BOLD}curl installed${NC}"
+
+echo ""
+
+# Step 2: Clone Repository
+echo -e "${BLUE}═══════════════════════════════════════════════════════${NC}"
+echo -e "${CYAN}${BOLD}  Step 2/6: Cloning Repository${NC}"
+echo -e "${BLUE}═══════════════════════════════════════════════════════${NC}"
+echo ""
+
+if [ -d "$INSTALL_DIR" ]; then
+    echo -e "${YELLOW}⚠${NC}  Directory exists. Removing..."
+    rm -rf "$INSTALL_DIR"
+fi
+
+echo -e "${CYAN}▸${NC} Cloning from GitHub..."
+if git clone --depth 1 "$REPO_URL" "$INSTALL_DIR" &>/dev/null; then
+    echo -e "${GREEN}✓${NC} Repository cloned successfully"
+else
+    echo -e "${RED}✗${NC} Failed to clone repository"
+    exit 1
+fi
+
+cd "$INSTALL_DIR"
+echo ""
+
+# Step 3: Setup Environment
+echo -e "${BLUE}═══════════════════════════════════════════════════════${NC}"
+echo -e "${CYAN}${BOLD}  Step 3/6: Setting Up Environment${NC}"
+echo -e "${BLUE}═══════════════════════════════════════════════════════${NC}"
+echo ""
+
+echo -e "${CYAN}▸${NC} Creating .env file..."
+cat > .env <<ENVEOF
+# Qwen API Configuration
+# Auto-generated by deploy_standalone.sh
+
+# ============================================
+# Qwen Provider Authentication
+# ============================================
+QWEN_EMAIL=${QWEN_EMAIL}
+QWEN_PASSWORD=${QWEN_PASSWORD}
+
+# ============================================
+# Server Configuration
+# ============================================
+LISTEN_PORT=${LISTEN_PORT}
+HOST=0.0.0.0
+DEBUG_LOGGING=false
+
+# ============================================
+# Authentication Settings
+# ============================================
+SKIP_AUTH_TOKEN=false
+ANONYMOUS_MODE=true
+
+# ============================================
+# Feature Flags
+# ============================================
+FLAREPROX_ENABLED=${FLAREPROX_ENABLED}
+TOOL_SUPPORT=true
+SCAN_LIMIT=200000
+ENVEOF
+
+chmod 600 .env
+echo -e "${GREEN}✓${NC} Environment configured (.env created with secure permissions)"
+echo ""
+
+# Step 4: Install Dependencies
+echo -e "${BLUE}═══════════════════════════════════════════════════════${NC}"
+echo -e "${CYAN}${BOLD}  Step 4/6: Installing Dependencies${NC}"
+echo -e "${BLUE}═══════════════════════════════════════════════════════${NC}"
+echo ""
+
+echo -e "${CYAN}▸${NC} Creating virtual environment..."
+python3 -m venv venv
+echo -e "${GREEN}✓${NC} Virtual environment created"
+
+echo -e "${CYAN}▸${NC} Activating virtual environment..."
+source venv/bin/activate
+
+echo -e "${CYAN}▸${NC} Upgrading pip..."
+pip install --upgrade pip setuptools wheel -q
+
+echo -e "${CYAN}▸${NC} Installing package and dependencies..."
+pip install -e . -q
+echo -e "${GREEN}✓${NC} Dependencies installed successfully"
+echo ""
+
+# Step 5: Start Server
+echo -e "${BLUE}═══════════════════════════════════════════════════════${NC}"
+echo -e "${CYAN}${BOLD}  Step 5/6: Starting Server${NC}"
+echo -e "${BLUE}═══════════════════════════════════════════════════════${NC}"
+echo ""
+
+echo -e "${CYAN}▸${NC} Starting server on port ${LISTEN_PORT}..."
+nohup python main.py > server.log 2>&1 &
+SERVER_PID=$!
+echo -e "${CYAN}ℹ${NC}  Server PID: ${SERVER_PID}"
+echo "$SERVER_PID" > .server_pid
+
+echo -e "${CYAN}▸${NC} Waiting for server to be ready..."
+max_attempts=30
+attempt=0
+while [ $attempt -lt $max_attempts ]; do
+    if curl -s "http://localhost:${LISTEN_PORT}/health" > /dev/null 2>&1; then
+        echo ""
+        echo -e "${GREEN}✓${NC} Server is ready!"
+        break
+    fi
+    sleep 1
+    ((attempt++))
+    echo -n "."
+done
+
+if [ $attempt -eq $max_attempts ]; then
+    echo ""
+    echo -e "${RED}✗${NC} Server failed to start within ${max_attempts} seconds"
+    echo ""
+    echo -e "${CYAN}Last 30 lines of server log:${NC}"
+    tail -n 30 server.log
+    exit 1
+fi
+
+echo ""
+
+# Step 6: Validate API
+echo -e "${BLUE}═══════════════════════════════════════════════════════${NC}"
+echo -e "${CYAN}${BOLD}  Step 6/6: Validating API${NC}"
+echo -e "${BLUE}═══════════════════════════════════════════════════════${NC}"
+echo ""
+
+echo -e "${CYAN}▸${NC} Testing health endpoint..."
+health_response=$(curl -s "http://localhost:${LISTEN_PORT}/health")
+echo -e "${GREEN}✓${NC} Health check passed"
+echo -e "${CYAN}Response:${NC} $health_response"
+
+echo ""
+echo -e "${CYAN}▸${NC} Testing chat completion endpoint..."
+
+test_request='{
+  "model": "qwen-max",
+  "messages": [
+    {"role": "system", "content": "You are a helpful assistant."},
+    {"role": "user", "content": "Say hello in exactly 5 words"}
+  ],
+  "max_tokens": 50,
+  "temperature": 0.7,
+  "stream": false
+}'
+
+api_response=$(curl -s -w "\n%{http_code}" -X POST \
+    "http://localhost:${LISTEN_PORT}/chat/completions" \
+    -H "Content-Type: application/json" \
+    -H "Authorization: Bearer test-token" \
+    -d "$test_request" 2>/dev/null)
+
+http_code=$(echo "$api_response" | tail -n1)
+response_body=$(echo "$api_response" | head -n-1)
+
+if [ "$http_code" == "200" ]; then
+    echo -e "${GREEN}✓${NC} API validation successful!"
+    echo ""
+    echo -e "${CYAN}${BOLD}API Response:${NC}"
+    echo "$response_body" | python3 -m json.tool 2>/dev/null || echo "$response_body"
+    
+    message=$(echo "$response_body" | python3 -c "import sys,json; print(json.load(sys.stdin)['choices'][0]['message']['content'])" 2>/dev/null)
+    if [ -n "$message" ]; then
+        echo ""
+        echo -e "${GREEN}${BOLD}✓ Assistant Response:${NC} $message"
+    fi
+else
+    echo -e "${RED}✗${NC} API validation failed (HTTP ${http_code})"
+    echo -e "${RED}Response:${NC} $response_body"
+fi
+
+echo ""
+
+# Final Summary
+echo -e "${GREEN}${BOLD}╔═══════════════════════════════════════════════════════╗${NC}"
+echo -e "${GREEN}${BOLD}║                                                       ║${NC}"
+echo -e "${GREEN}${BOLD}║   🎉 Deployment Complete!                            ║${NC}"
+echo -e "${GREEN}${BOLD}║                                                       ║${NC}"
+echo -e "${GREEN}${BOLD}╚═══════════════════════════════════════════════════════╝${NC}"
+echo ""
+echo -e "${CYAN}${BOLD}Server Information:${NC}"
+echo -e "  ${GREEN}✓${NC} Server running on: http://localhost:${LISTEN_PORT}"
+echo -e "  ${GREEN}✓${NC} Process ID: ${SERVER_PID}"
+echo -e "  ${GREEN}✓${NC} Installation directory: ${INSTALL_DIR}"
+echo -e "  ${GREEN}✓${NC} Log file: ${INSTALL_DIR}/server.log"
+echo ""
+echo -e "${CYAN}${BOLD}OpenAI-Compatible Endpoint:${NC}"
+echo -e "  ${BLUE}http://localhost:${LISTEN_PORT}/v1/chat/completions${NC}"
+echo ""
+echo -e "${CYAN}${BOLD}Usage Example:${NC}"
+echo -e '  curl http://localhost:'"${LISTEN_PORT}"'/v1/chat/completions \'
+echo -e '    -H "Content-Type: application/json" \'
+echo -e '    -H "Authorization: Bearer your-token-here" \'
+echo -e '    -d '"'"'{"model":"qwen-max","messages":[{"role":"user","content":"Hello!"}]}'"'"
+echo ""
+echo -e "${CYAN}${BOLD}Useful Commands:${NC}"
+echo -e "  View logs:      ${BLUE}tail -f ${INSTALL_DIR}/server.log${NC}"
+echo -e "  Stop server:    ${BLUE}kill ${SERVER_PID}${NC}"
+echo -e "  Restart server: ${BLUE}cd ${INSTALL_DIR} && source venv/bin/activate && python main.py${NC}"
+echo ""
+echo -e "${GREEN}Server is now running and will continue in the background.${NC}"
+echo -e "${YELLOW}Press Ctrl+C to exit this script (server will keep running).${NC}"
+echo ""
+
+# Monitor logs
+echo -e "${CYAN}${BOLD}Monitoring server logs (Ctrl+C to stop):${NC}"
+echo ""
+tail -f server.log

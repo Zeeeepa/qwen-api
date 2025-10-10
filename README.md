@@ -37,6 +37,33 @@
 
 ## 🚀 Quick Start
 
+### 🎯 Option 1: One-Command Auto Deploy (Recommended)
+
+**The fastest way to get started!** This script handles everything automatically:
+
+```bash
+# Download and run
+curl -fsSL https://raw.githubusercontent.com/Zeeeepa/qwen-api/main/autodeploy.sh -o autodeploy.sh
+chmod +x autodeploy.sh
+./autodeploy.sh
+```
+
+**What it does:**
+- ✅ Checks prerequisites (Python 3.10+, git, pip)
+- ✅ Collects credentials interactively
+- ✅ Clones repository
+- ✅ Sets up environment
+- ✅ Installs dependencies
+- ✅ Starts server
+- ✅ Validates with API test
+- ✅ Continues running server
+
+📖 **Full documentation:** [AUTODEPLOY.md](./AUTODEPLOY.md)
+
+---
+
+### 🛠️ Option 2: Manual Installation
+
 ### Prerequisites
 
 - Python 3.10+
