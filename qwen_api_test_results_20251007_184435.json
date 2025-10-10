@@ -1,0 +1,490 @@
+{
+  "timestamp": "2025-10-07T18:44:35.065444",
+  "base_url": "http://localhost:8080/v1",
+  "summary": {
+    "total": 53,
+    "passed": 0,
+    "failed": 40,
+    "skipped": 13,
+    "duration": 0.45735741200013535
+  },
+  "results": [
+    {
+      "model": "qwen-max",
+      "feature": "text_chat",
+      "status": "FAIL",
+      "duration": 0.33317478399999345,
+      "error": "Error code: 401 - {'detail': 'Invalid API key'}",
+      "response_preview": null,
+      "metadata": {}
+    },
+    {
+      "model": "qwen-max",
+      "feature": "streaming",
+      "status": "FAIL",
+      "duration": 0.0037361659999533003,
+      "error": "Error code: 401 - {'detail': 'Invalid API key'}",
+      "response_preview": null,
+      "metadata": {}
+    },
+    {
+      "model": "qwen-max-thinking",
+      "feature": "thinking",
+      "status": "FAIL",
+      "duration": 0.002848754000012832,
+      "error": "Error code: 401 - {'detail': 'Invalid API key'}",
+      "response_preview": null,
+      "metadata": {}
+    },
+    {
+      "model": "qwen-max-thinking",
+      "feature": "streaming",
+      "status": "FAIL",
+      "duration": 0.002915521000034005,
+      "error": "Error code: 401 - {'detail': 'Invalid API key'}",
+      "response_preview": null,
+      "metadata": {}
+    },
+    {
+      "model": "qwen-max-search",
+      "feature": "search",
+      "status": "FAIL",
+      "duration": 0.0030508020000183933,
+      "error": "Error code: 401 - {'detail': 'Invalid API key'}",
+      "response_preview": null,
+      "metadata": {}
+    },
+    {
+      "model": "qwen-max-search",
+      "feature": "streaming",
+      "status": "FAIL",
+      "duration": 0.0029404489999933503,
+      "error": "Error code: 401 - {'detail': 'Invalid API key'}",
+      "response_preview": null,
+      "metadata": {}
+    },
+    {
+      "model": "qwen-max-image",
+      "feature": "image_generation",
+      "status": "FAIL",
+      "duration": 0.0030243580000046677,
+      "error": "Error code: 401 - {'detail': 'Invalid API key'}",
+      "response_preview": null,
+      "metadata": {}
+    },
+    {
+      "model": "qwen-max-image_edit",
+      "feature": "image_edit",
+      "status": "SKIP",
+      "duration": 0.0,
+      "error": "Requires image input - manual testing needed",
+      "response_preview": null,
+      "metadata": {}
+    },
+    {
+      "model": "qwen-max-video",
+      "feature": "video_generation",
+      "status": "SKIP",
+      "duration": 0.0,
+      "error": "Video generation skipped (very slow)",
+      "response_preview": null,
+      "metadata": {}
+    },
+    {
+      "model": "qwen-max-deep-research",
+      "feature": "deep_research",
+      "status": "SKIP",
+      "duration": 0.0,
+      "error": "Deep research skipped (very slow)",
+      "response_preview": null,
+      "metadata": {}
+    },
+    {
+      "model": "qwen-plus",
+      "feature": "text_chat",
+      "status": "FAIL",
+      "duration": 0.0029644609999763816,
+      "error": "Error code: 401 - {'detail': 'Invalid API key'}",
+      "response_preview": null,
+      "metadata": {}
+    },
+    {
+      "model": "qwen-plus",
+      "feature": "streaming",
+      "status": "FAIL",
+      "duration": 0.002814873000033913,
+      "error": "Error code: 401 - {'detail': 'Invalid API key'}",
+      "response_preview": null,
+      "metadata": {}
+    },
+    {
+      "model": "qwen-plus-thinking",
+      "feature": "thinking",
+      "status": "FAIL",
+      "duration": 0.00300066599999127,
+      "error": "Error code: 401 - {'detail': 'Invalid API key'}",
+      "response_preview": null,
+      "metadata": {}
+    },
+    {
+      "model": "qwen-plus-thinking",
+      "feature": "streaming",
+      "status": "FAIL",
+      "duration": 0.003274513000008028,
+      "error": "Error code: 401 - {'detail': 'Invalid API key'}",
+      "response_preview": null,
+      "metadata": {}
+    },
+    {
+      "model": "qwen-plus-search",
+      "feature": "search",
+      "status": "FAIL",
+      "duration": 0.003310691000024235,
+      "error": "Error code: 401 - {'detail': 'Invalid API key'}",
+      "response_preview": null,
+      "metadata": {}
+    },
+    {
+      "model": "qwen-plus-search",
+      "feature": "streaming",
+      "status": "FAIL",
+      "duration": 0.0031298440000000483,
+      "error": "Error code: 401 - {'detail': 'Invalid API key'}",
+      "response_preview": null,
+      "metadata": {}
+    },
+    {
+      "model": "qwen-plus-image",
+      "feature": "image_generation",
+      "status": "FAIL",
+      "duration": 0.005105618000015966,
+      "error": "Error code: 401 - {'detail': 'Invalid API key'}",
+      "response_preview": null,
+      "metadata": {}
+    },
+    {
+      "model": "qwen-plus-image_edit",
+      "feature": "image_edit",
+      "status": "SKIP",
+      "duration": 0.0,
+      "error": "Requires image input - manual testing needed",
+      "response_preview": null,
+      "metadata": {}
+    },
+    {
+      "model": "qwen-plus-video",
+      "feature": "video_generation",
+      "status": "SKIP",
+      "duration": 0.0,
+      "error": "Video generation skipped (very slow)",
+      "response_preview": null,
+      "metadata": {}
+    },
+    {
+      "model": "qwen-plus-deep-research",
+      "feature": "deep_research",
+      "status": "SKIP",
+      "duration": 0.0,
+      "error": "Deep research skipped (very slow)",
+      "response_preview": null,
+      "metadata": {}
+    },
+    {
+      "model": "qwen-turbo",
+      "feature": "text_chat",
+      "status": "FAIL",
+      "duration": 0.003312315000016497,
+      "error": "Error code: 401 - {'detail': 'Invalid API key'}",
+      "response_preview": null,
+      "metadata": {}
+    },
+    {
+      "model": "qwen-turbo",
+      "feature": "streaming",
+      "status": "FAIL",
+      "duration": 0.0031808649999902627,
+      "error": "Error code: 401 - {'detail': 'Invalid API key'}",
+      "response_preview": null,
+      "metadata": {}
+    },
+    {
+      "model": "qwen-turbo-thinking",
+      "feature": "thinking",
+      "status": "FAIL",
+      "duration": 0.0029007109999952263,
+      "error": "Error code: 401 - {'detail': 'Invalid API key'}",
+      "response_preview": null,
+      "metadata": {}
+    },
+    {
+      "model": "qwen-turbo-thinking",
+      "feature": "streaming",
+      "status": "FAIL",
+      "duration": 0.0027857029999722727,
+      "error": "Error code: 401 - {'detail': 'Invalid API key'}",
+      "response_preview": null,
+      "metadata": {}
+    },
+    {
+      "model": "qwen-turbo-search",
+      "feature": "search",
+      "status": "FAIL",
+      "duration": 0.0029653950000465557,
+      "error": "Error code: 401 - {'detail': 'Invalid API key'}",
+      "response_preview": null,
+      "metadata": {}
+    },
+    {
+      "model": "qwen-turbo-search",
+      "feature": "streaming",
+      "status": "FAIL",
+      "duration": 0.003180493000002116,
+      "error": "Error code: 401 - {'detail': 'Invalid API key'}",
+      "response_preview": null,
+      "metadata": {}
+    },
+    {
+      "model": "qwen-turbo-image",
+      "feature": "image_generation",
+      "status": "FAIL",
+      "duration": 0.003249320000008993,
+      "error": "Error code: 401 - {'detail': 'Invalid API key'}",
+      "response_preview": null,
+      "metadata": {}
+    },
+    {
+      "model": "qwen-turbo-image_edit",
+      "feature": "image_edit",
+      "status": "SKIP",
+      "duration": 0.0,
+      "error": "Requires image input - manual testing needed",
+      "response_preview": null,
+      "metadata": {}
+    },
+    {
+      "model": "qwen-turbo-video",
+      "feature": "video_generation",
+      "status": "SKIP",
+      "duration": 0.0,
+      "error": "Video generation skipped (very slow)",
+      "response_preview": null,
+      "metadata": {}
+    },
+    {
+      "model": "qwen-turbo-deep-research",
+      "feature": "deep_research",
+      "status": "SKIP",
+      "duration": 0.0,
+      "error": "Deep research skipped (very slow)",
+      "response_preview": null,
+      "metadata": {}
+    },
+    {
+      "model": "qwen-long",
+      "feature": "text_chat",
+      "status": "FAIL",
+      "duration": 0.00328644199998962,
+      "error": "Error code: 401 - {'detail': 'Invalid API key'}",
+      "response_preview": null,
+      "metadata": {}
+    },
+    {
+      "model": "qwen-long",
+      "feature": "streaming",
+      "status": "FAIL",
+      "duration": 0.003183401999990565,
+      "error": "Error code: 401 - {'detail': 'Invalid API key'}",
+      "response_preview": null,
+      "metadata": {}
+    },
+    {
+      "model": "qwen-long-thinking",
+      "feature": "thinking",
+      "status": "FAIL",
+      "duration": 0.0032953950000091936,
+      "error": "Error code: 401 - {'detail': 'Invalid API key'}",
+      "response_preview": null,
+      "metadata": {}
+    },
+    {
+      "model": "qwen-long-thinking",
+      "feature": "streaming",
+      "status": "FAIL",
+      "duration": 0.003616920000013124,
+      "error": "Error code: 401 - {'detail': 'Invalid API key'}",
+      "response_preview": null,
+      "metadata": {}
+    },
+    {
+      "model": "qwen-long-search",
+      "feature": "search",
+      "status": "FAIL",
+      "duration": 0.0033439549999911833,
+      "error": "Error code: 401 - {'detail': 'Invalid API key'}",
+      "response_preview": null,
+      "metadata": {}
+    },
+    {
+      "model": "qwen-long-search",
+      "feature": "streaming",
+      "status": "FAIL",
+      "duration": 0.0033471859999849585,
+      "error": "Error code: 401 - {'detail': 'Invalid API key'}",
+      "response_preview": null,
+      "metadata": {}
+    },
+    {
+      "model": "qwen-long-image",
+      "feature": "image_generation",
+      "status": "FAIL",
+      "duration": 0.0032877809999831697,
+      "error": "Error code: 401 - {'detail': 'Invalid API key'}",
+      "response_preview": null,
+      "metadata": {}
+    },
+    {
+      "model": "qwen-long-image_edit",
+      "feature": "image_edit",
+      "status": "SKIP",
+      "duration": 0.0,
+      "error": "Requires image input - manual testing needed",
+      "response_preview": null,
+      "metadata": {}
+    },
+    {
+      "model": "qwen-long-video",
+      "feature": "video_generation",
+      "status": "SKIP",
+      "duration": 0.0,
+      "error": "Video generation skipped (very slow)",
+      "response_preview": null,
+      "metadata": {}
+    },
+    {
+      "model": "qwen-long-deep-research",
+      "feature": "deep_research",
+      "status": "SKIP",
+      "duration": 0.0,
+      "error": "Deep research skipped (very slow)",
+      "response_preview": null,
+      "metadata": {}
+    },
+    {
+      "model": "qwen-max-latest",
+      "feature": "text_chat",
+      "status": "FAIL",
+      "duration": 0.0032960089999960474,
+      "error": "Error code: 401 - {'detail': 'Invalid API key'}",
+      "response_preview": null,
+      "metadata": {}
+    },
+    {
+      "model": "qwen-max-latest",
+      "feature": "streaming",
+      "status": "FAIL",
+      "duration": 0.003193808999981229,
+      "error": "Error code: 401 - {'detail': 'Invalid API key'}",
+      "response_preview": null,
+      "metadata": {}
+    },
+    {
+      "model": "qwen-max-0428",
+      "feature": "text_chat",
+      "status": "FAIL",
+      "duration": 0.0031851520000145683,
+      "error": "Error code: 401 - {'detail': 'Invalid API key'}",
+      "response_preview": null,
+      "metadata": {}
+    },
+    {
+      "model": "qwen-max-0428",
+      "feature": "streaming",
+      "status": "FAIL",
+      "duration": 0.0033236350000152015,
+      "error": "Error code: 401 - {'detail': 'Invalid API key'}",
+      "response_preview": null,
+      "metadata": {}
+    },
+    {
+      "model": "qwen-plus-latest",
+      "feature": "text_chat",
+      "status": "FAIL",
+      "duration": 0.003090794999991431,
+      "error": "Error code: 401 - {'detail': 'Invalid API key'}",
+      "response_preview": null,
+      "metadata": {}
+    },
+    {
+      "model": "qwen-plus-latest",
+      "feature": "streaming",
+      "status": "FAIL",
+      "duration": 0.0029301130000476405,
+      "error": "Error code: 401 - {'detail': 'Invalid API key'}",
+      "response_preview": null,
+      "metadata": {}
+    },
+    {
+      "model": "qwen-turbo-latest",
+      "feature": "text_chat",
+      "status": "FAIL",
+      "duration": 0.0030516510000211383,
+      "error": "Error code: 401 - {'detail': 'Invalid API key'}",
+      "response_preview": null,
+      "metadata": {}
+    },
+    {
+      "model": "qwen-turbo-latest",
+      "feature": "streaming",
+      "status": "FAIL",
+      "duration": 0.0032649709999645893,
+      "error": "Error code: 401 - {'detail': 'Invalid API key'}",
+      "response_preview": null,
+      "metadata": {}
+    },
+    {
+      "model": "qwen-deep-research",
+      "feature": "deep_research",
+      "status": "SKIP",
+      "duration": 0.0,
+      "error": "Deep research skipped (very slow)",
+      "response_preview": null,
+      "metadata": {}
+    },
+    {
+      "model": "qwen3-coder-plus",
+      "feature": "text_chat",
+      "status": "FAIL",
+      "duration": 0.0029495890000248437,
+      "error": "Error code: 401 - {'detail': 'Invalid API key'}",
+      "response_preview": null,
+      "metadata": {}
+    },
+    {
+      "model": "qwen3-coder-plus",
+      "feature": "streaming",
+      "status": "FAIL",
+      "duration": 0.002778765000016392,
+      "error": "Error code: 401 - {'detail': 'Invalid API key'}",
+      "response_preview": null,
+      "metadata": {}
+    },
+    {
+      "model": "qwen-coder-plus",
+      "feature": "text_chat",
+      "status": "FAIL",
+      "duration": 0.0030545600000095874,
+      "error": "Error code: 401 - {'detail': 'Invalid API key'}",
+      "response_preview": null,
+      "metadata": {}
+    },
+    {
+      "model": "qwen-coder-plus",
+      "feature": "streaming",
+      "status": "FAIL",
+      "duration": 0.0030109799999991083,
+      "error": "Error code: 401 - {'detail': 'Invalid API key'}",
+      "response_preview": null,
+      "metadata": {}
+    }
+  ]
+}
