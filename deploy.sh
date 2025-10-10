@@ -211,21 +211,17 @@ QWEN_EMAIL=$QWEN_USER_EMAIL
 QWEN_PASSWORD=$QWEN_USER_PASSWORD
 
 # Server Configuration
-PORT=8096
 HOST=0.0.0.0
+LISTEN_PORT=8096
 
 # Model Configuration
 PRIMARY_MODEL=qwen-turbo
 THINKING_MODEL=qwen-plus
 SEARCH_MODEL=qwen-plus
-AIR_MODEL=qwen-2.5-coder-32b-instruct
+AIR_MODEL=qwen-turbo
 
-# API Configuration
-DEFAULT_MAX_TOKENS=2000
-DEFAULT_TEMPERATURE=0.7
-
-# Logging
-LOG_LEVEL=INFO
+# Debug Configuration
+DEBUG_LOGGING=true
 EOF
 
 print_success "Environment variables configured"
@@ -349,4 +345,3 @@ if [ "$1" = "--follow" ]; then
 fi
 
 exit 0
-
