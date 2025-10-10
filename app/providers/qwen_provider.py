@@ -1118,11 +1118,12 @@ class QwenProvider(BaseProvider):
             if not chat_id:
                 raise ValueError(f"Failed to create chat session for {chat_type}")
 
-            # Build text chat request with real chat_id
+            # Build text chat request with real chat_id  
+            # Force stream=True (Qwen API seems to require it)
             body = self.builder.build_text_chat_request(
                 model=request.model,
                 messages=messages_list,
-                stream=request.stream if request.stream is not None else True
+                stream=True
             )
             
             # Override generated UUIDs with real chat_id
