@@ -130,6 +130,7 @@ async def chat_completions(request: OpenAIRequest, authorization: str = Header(.
 
     try:
         # Validate API key (skip if SKIP_AUTH_TOKEN is enabled)
+        logger.debug(f"🔑 Auth check: SKIP_AUTH_TOKEN={settings.SKIP_AUTH_TOKEN}")
         if not settings.SKIP_AUTH_TOKEN:
             if not authorization.startswith("Bearer "):
                 raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
