@@ -62,11 +62,11 @@ async def generate_images(request: ImageGenerationRequest, authorization: str = 
     try:
         # Validate auth
         if not authorization.startswith("Bearer "):
-                raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+            raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
 
-            api_key = authorization[7:]
-            if api_key != settings.AUTH_TOKEN:
-                raise HTTPException(status_code=401, detail="Invalid API key")
+        api_key = authorization[7:]
+        if api_key != settings.AUTH_TOKEN:
+            raise HTTPException(status_code=401, detail="Invalid API key")
 
         # Get provider
         provider_router = get_provider_router()
@@ -105,11 +105,11 @@ async def edit_images(request: ImageEditRequest, authorization: str = Header(...
     try:
         # Validate auth
         if not authorization.startswith("Bearer "):
-                raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+            raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
 
-            api_key = authorization[7:]
-            if api_key != settings.AUTH_TOKEN:
-                raise HTTPException(status_code=401, detail="Invalid API key")
+        api_key = authorization[7:]
+        if api_key != settings.AUTH_TOKEN:
+            raise HTTPException(status_code=401, detail="Invalid API key")
 
         # Get provider
         provider_router = get_provider_router()
@@ -150,11 +150,11 @@ async def generate_videos(request: VideoGenerationRequest, authorization: str = 
     try:
         # Validate auth
         if not authorization.startswith("Bearer "):
-                raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+            raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
 
-            api_key = authorization[7:]
-            if api_key != settings.AUTH_TOKEN:
-                raise HTTPException(status_code=401, detail="Invalid API key")
+        api_key = authorization[7:]
+        if api_key != settings.AUTH_TOKEN:
+            raise HTTPException(status_code=401, detail="Invalid API key")
 
         # Get provider
         provider_router = get_provider_router()
@@ -200,11 +200,11 @@ async def deep_research(request: DeepResearchRequest, authorization: str = Heade
     try:
         # Validate auth
         if not authorization.startswith("Bearer "):
-                raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+            raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
 
-            api_key = authorization[7:]
-            if api_key != settings.AUTH_TOKEN:
-                raise HTTPException(status_code=401, detail="Invalid API key")
+        api_key = authorization[7:]
+        if api_key != settings.AUTH_TOKEN:
+            raise HTTPException(status_code=401, detail="Invalid API key")
 
         # Get provider
         provider_router = get_provider_router()
