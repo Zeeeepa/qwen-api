@@ -101,6 +101,15 @@ class ProviderFactory:
                     api_endpoint="https://qwen.aikit.club/v1/chat/completions"
                 )
                 qwen_provider = QwenProxyProvider(config=config)
+                
+                # Initialize the provider to extract Bearer token
+                import asyncio
+                loop = asyncio.get_event_loop()
+                init_success = loop.run_until_complete(qwen_provider.initialize())
+                if not init_success:
+                    logger.error("❌ Failed to initialize Qwen Proxy Provider")
+                    raise ValueError("Qwen Proxy Provider initialization failed")
+                
             else:
                 # Use direct provider (chat.qwen.ai) - LEGACY
                 logger.info("⚠️  Using Direct Qwen Provider (legacy mode)")
