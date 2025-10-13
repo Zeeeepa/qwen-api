@@ -61,8 +61,7 @@ async def generate_images(request: ImageGenerationRequest, authorization: str = 
 
     try:
         # Validate auth
-        if not settings.SKIP_AUTH_TOKEN:
-            if not authorization.startswith("Bearer "):
+        if not authorization.startswith("Bearer "):
                 raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
 
             api_key = authorization[7:]
@@ -105,8 +104,7 @@ async def edit_images(request: ImageEditRequest, authorization: str = Header(...
 
     try:
         # Validate auth
-        if not settings.SKIP_AUTH_TOKEN:
-            if not authorization.startswith("Bearer "):
+        if not authorization.startswith("Bearer "):
                 raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
 
             api_key = authorization[7:]
@@ -151,8 +149,7 @@ async def generate_videos(request: VideoGenerationRequest, authorization: str = 
 
     try:
         # Validate auth
-        if not settings.SKIP_AUTH_TOKEN:
-            if not authorization.startswith("Bearer "):
+        if not authorization.startswith("Bearer "):
                 raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
 
             api_key = authorization[7:]
@@ -202,8 +199,7 @@ async def deep_research(request: DeepResearchRequest, authorization: str = Heade
 
     try:
         # Validate auth
-        if not settings.SKIP_AUTH_TOKEN:
-            if not authorization.startswith("Bearer "):
+        if not authorization.startswith("Bearer "):
                 raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
 
             api_key = authorization[7:]

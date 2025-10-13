@@ -129,15 +129,13 @@ async def chat_completions(request: OpenAIRequest, authorization: str = Header(.
     logger.info(f"😶‍🌫️ 收到客户端请求 - 模型: {request.model}, 流式: {request.stream}, 消息数: {len(request.messages)}, 角色: {role}, 工具数: {len(request.tools) if request.tools else 0}")
 
     try:
-        # Validate API key (skip if SKIP_AUTH_TOKEN is enabled)
-        logger.debug(f"🔑 Auth check: SKIP_AUTH_TOKEN={settings.SKIP_AUTH_TOKEN}")
-        if not settings.SKIP_AUTH_TOKEN:
-            if not authorization.startswith("Bearer "):
-                raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+        # Validate API key
+        if not authorization.startswith("Bearer "):
+            raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
 
-            api_key = authorization[7:]
-            if api_key != settings.AUTH_TOKEN:
-                raise HTTPException(status_code=401, detail="Invalid API key")
+        api_key = authorization[7:]
+        if api_key != settings.AUTH_TOKEN:
+            raise HTTPException(status_code=401, detail="Invalid API key")
 
         # 使用多提供商路由器处理请求
         router_instance = get_provider_router_instance()
