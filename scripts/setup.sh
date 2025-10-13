@@ -107,6 +107,12 @@ if [ -z "$QWEN_EMAIL" ] || [ -z "$QWEN_PASSWORD" ]; then
     fi
     
     echo -e "${GREEN}✅ Credentials saved to .env${NC}\n"
+    
+    # Add ANONYMOUS_MODE setting for testing
+    if ! grep -q "ANONYMOUS_MODE" .env 2>/dev/null; then
+        echo "ANONYMOUS_MODE=true" >> .env
+        echo -e "${GREEN}✅ Anonymous mode enabled for testing${NC}\n"
+    fi
 fi
 
 # Create necessary directories
@@ -122,4 +128,3 @@ echo -e "${CYAN}Next steps:${NC}"
 echo -e "  ${BLUE}1.${NC} Start the server: ${YELLOW}bash scripts/start.sh${NC}"
 echo -e "  ${BLUE}2.${NC} Test the API: ${YELLOW}bash scripts/send_request.sh${NC}"
 echo -e "  ${BLUE}3.${NC} Or run everything: ${YELLOW}bash scripts/all.sh${NC}\n"
-
