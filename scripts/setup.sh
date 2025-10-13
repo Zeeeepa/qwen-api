@@ -109,10 +109,15 @@ if [ -z "$QWEN_EMAIL" ] || [ -z "$QWEN_PASSWORD" ]; then
     echo -e "${GREEN}✅ Credentials saved to .env${NC}\n"
 fi
 
-# Add ANONYMOUS_MODE setting for testing (always add if not present)
+# Add auth bypass settings for testing (always add if not present)
+if ! grep -q "SKIP_AUTH_TOKEN" .env 2>/dev/null; then
+    echo "SKIP_AUTH_TOKEN=true" >> .env
+    echo -e "${GREEN}✅ Auth token validation disabled for testing${NC}\n"
+fi
+
 if ! grep -q "ANONYMOUS_MODE" .env 2>/dev/null; then
     echo "ANONYMOUS_MODE=true" >> .env
-    echo -e "${GREEN}✅ Anonymous mode enabled for testing${NC}\n"
+    echo -e "${GREEN}✅ Anonymous mode enabled${NC}\n"
 fi
 
 # Create necessary directories
