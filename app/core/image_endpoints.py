@@ -12,6 +12,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from app.core.config import settings
+from app.core.openai import validate_qwen_token
 from app.providers import get_provider_router
 from app.utils.logger import get_logger
 
@@ -60,13 +61,13 @@ async def generate_images(request: ImageGenerationRequest, authorization: str = 
     logger.info(f"🎨 Image generation request: '{request.prompt[:50]}...' size={request.size}")
 
     try:
-        # Validate auth
+        # Validate Bearer token
         if not authorization.startswith("Bearer "):
             raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
 
-        api_key = authorization[7:]
-        if api_key != settings.AUTH_TOKEN:
-            raise HTTPException(status_code=401, detail="Invalid API key")
+        token = authorization[7:].strip()
+        if not validate_qwen_token(token):
+            raise HTTPException(status_code=401, detail="Invalid or expired Qwen token")
 
         # Get provider
         provider_router = get_provider_router()
@@ -103,13 +104,13 @@ async def edit_images(request: ImageEditRequest, authorization: str = Header(...
     logger.info(f"🎨 Image edit request: '{request.prompt[:50]}...'")
 
     try:
-        # Validate auth
+        # Validate Bearer token
         if not authorization.startswith("Bearer "):
             raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
 
-        api_key = authorization[7:]
-        if api_key != settings.AUTH_TOKEN:
-            raise HTTPException(status_code=401, detail="Invalid API key")
+        token = authorization[7:].strip()
+        if not validate_qwen_token(token):
+            raise HTTPException(status_code=401, detail="Invalid or expired Qwen token")
 
         # Get provider
         provider_router = get_provider_router()
@@ -148,13 +149,13 @@ async def generate_videos(request: VideoGenerationRequest, authorization: str = 
     logger.info(f"🎬 Video generation request: '{request.prompt[:50]}...' duration={request.duration}s")
 
     try:
-        # Validate auth
+        # Validate Bearer token
         if not authorization.startswith("Bearer "):
             raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
 
-        api_key = authorization[7:]
-        if api_key != settings.AUTH_TOKEN:
-            raise HTTPException(status_code=401, detail="Invalid API key")
+        token = authorization[7:].strip()
+        if not validate_qwen_token(token):
+            raise HTTPException(status_code=401, detail="Invalid or expired Qwen token")
 
         # Get provider
         provider_router = get_provider_router()
@@ -198,13 +199,13 @@ async def deep_research(request: DeepResearchRequest, authorization: str = Heade
     logger.info(f"🔬 Deep research request: '{request.query[:50]}...' max_iterations={request.max_iterations}")
 
     try:
-        # Validate auth
+        # Validate Bearer token
         if not authorization.startswith("Bearer "):
             raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
 
-        api_key = authorization[7:]
-        if api_key != settings.AUTH_TOKEN:
-            raise HTTPException(status_code=401, detail="Invalid API key")
+        token = authorization[7:].strip()
+        if not validate_qwen_token(token):
+            raise HTTPException(status_code=401, detail="Invalid or expired Qwen token")
 
         # Get provider
         provider_router = get_provider_router()

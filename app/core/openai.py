@@ -2,6 +2,7 @@
 
 import json
 import time
+import jwt
 from typing import Any, Dict, List
 
 from fastapi import APIRouter, Header, HTTPException
@@ -34,6 +35,48 @@ def get_provider_router_instance():
     if provider_router is None:
         provider_router = get_provider_router()
     return provider_router
+
+
+def validate_qwen_token(token: str) -> bool:
+    """
+    Validate Qwen JWT token format and structure.
+    
+    Token format from qwen.aikit.club:
+    - JWT token with structure: {"id": "...", "last_password_change": ..., "exp": ...}
+    - Must not be expired
+    - Must have valid structure
+    
+    Args:
+        token: JWT token string from Bearer header
+        
+    Returns:
+        bool: True if token is valid, False otherwise
+    """
+    try:
+        # Decode JWT without verification (we're just checking format and expiry)
+        # Note: Qwen tokens are self-contained and don't need server-side verification
+        payload = jwt.decode(token, options={"verify_signature": False})
+        
+        # Check required fields exist
+        if "id" not in payload or "exp" not in payload:
+            logger.warning("🔑 Invalid token format: missing required fields")
+            return False
+            
+        # Check if token is expired
+        exp_timestamp = payload.get("exp")
+        if exp_timestamp and time.time() > exp_timestamp:
+            logger.warning("🔑 Token expired")
+            return False
+            
+        logger.debug(f"🔑 Valid Qwen token for user: {payload.get('id', 'unknown')[:8]}...")
+        return True
+        
+    except jwt.DecodeError:
+        logger.warning("🔑 Invalid JWT token format")
+        return False
+    except Exception as e:
+        logger.error(f"🔑 Token validation error: {e}")
+        return False
 
 
 def create_chunk(chat_id: str, model: str, delta: Dict[str, Any], finish_reason: str = None) -> Dict[str, Any]:
@@ -129,13 +172,15 @@ async def chat_completions(request: OpenAIRequest, authorization: str = Header(.
     logger.info(f"😶‍🌫️ 收到客户端请求 - 模型: {request.model}, 流式: {request.stream}, 消息数: {len(request.messages)}, 角色: {role}, 工具数: {len(request.tools) if request.tools else 0}")
 
     try:
-        # Validate API key
+        # Validate Bearer token
         if not authorization.startswith("Bearer "):
             raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
 
-        api_key = authorization[7:]
-        if api_key != settings.AUTH_TOKEN:
-            raise HTTPException(status_code=401, detail="Invalid API key")
+        token = authorization[7:].strip()
+        
+        # Validate Qwen JWT token
+        if not validate_qwen_token(token):
+            raise HTTPException(status_code=401, detail="Invalid or expired Qwen token")
 
         # 使用多提供商路由器处理请求
         router_instance = get_provider_router_instance()
