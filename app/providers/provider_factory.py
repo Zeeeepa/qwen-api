@@ -12,8 +12,9 @@ from typing import Any, AsyncGenerator, Dict, List, Optional, Union
 
 from app.core.config import settings
 from app.models.schemas import OpenAIRequest
-from app.providers.base import BaseProvider, provider_registry
+from app.providers.base import BaseProvider, ProviderConfig, provider_registry
 from app.providers.qwen_provider import QwenProvider
+from app.providers.qwen_proxy_provider import QwenProxyProvider
 from app.utils.logger import get_logger
 
 logger = get_logger()
@@ -25,6 +26,7 @@ class ProviderFactory:
     def __init__(self):
         self._initialized = False
         self._default_provider = "qwen"
+        self._use_proxy = True  # Use proxy provider by default for better reliability
 
     def _load_provider_configs(self) -> Dict[str, Dict[str, str]]:
         """
@@ -90,14 +92,25 @@ class ProviderFactory:
             # Load provider configurations
             provider_configs = self._load_provider_configs()
 
-            # 注册 Qwen 提供商（主要提供商）
-            qwen_config = provider_configs.get("qwen")
-            if qwen_config:
-                logger.info("🔐 Initializing Qwen provider with authentication")
-                qwen_provider = QwenProvider(auth_config=qwen_config)
+            # Choose provider based on configuration
+            if self._use_proxy:
+                # Use proxy provider (qwen.aikit.club) - RECOMMENDED
+                logger.info("🚀 Using Qwen Proxy Provider (qwen.aikit.club)")
+                config = ProviderConfig(
+                    name="qwen",
+                    api_endpoint="https://qwen.aikit.club/v1/chat/completions"
+                )
+                qwen_provider = QwenProxyProvider(config=config)
             else:
-                logger.info("⚠️ Initializing Qwen provider without authentication (manual token required)")
-                qwen_provider = QwenProvider()
+                # Use direct provider (chat.qwen.ai) - LEGACY
+                logger.info("⚠️  Using Direct Qwen Provider (legacy mode)")
+                qwen_config = provider_configs.get("qwen")
+                if qwen_config:
+                    logger.info("🔐 Initializing Qwen provider with authentication")
+                    qwen_provider = QwenProvider(auth_config=qwen_config)
+                else:
+                    logger.info("⚠️ Initializing Qwen provider without authentication (manual token required)")
+                    qwen_provider = QwenProvider()
 
             provider_registry.register(
                 qwen_provider,
