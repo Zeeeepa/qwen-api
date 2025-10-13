@@ -107,12 +107,12 @@ if [ -z "$QWEN_EMAIL" ] || [ -z "$QWEN_PASSWORD" ]; then
     fi
     
     echo -e "${GREEN}✅ Credentials saved to .env${NC}\n"
-    
-    # Add ANONYMOUS_MODE setting for testing
-    if ! grep -q "ANONYMOUS_MODE" .env 2>/dev/null; then
-        echo "ANONYMOUS_MODE=true" >> .env
-        echo -e "${GREEN}✅ Anonymous mode enabled for testing${NC}\n"
-    fi
+fi
+
+# Add ANONYMOUS_MODE setting for testing (always add if not present)
+if ! grep -q "ANONYMOUS_MODE" .env 2>/dev/null; then
+    echo "ANONYMOUS_MODE=true" >> .env
+    echo -e "${GREEN}✅ Anonymous mode enabled for testing${NC}\n"
 fi
 
 # Create necessary directories
