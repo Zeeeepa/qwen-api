@@ -9,7 +9,13 @@ from dotenv import load_dotenv
 from app.utils.logger import logger
 
 # Load environment variables from .env file
-load_dotenv()
+# Try to load from different locations in case working directory changes
+_env_loaded = load_dotenv(dotenv_path=".env") or load_dotenv(dotenv_path="../.env")
+if not _env_loaded:
+    load_dotenv()  # Fall back to default search
+
+# Debug: Print what SKIP_AUTH_TOKEN is set to
+print(f"DEBUG: SKIP_AUTH_TOKEN environment variable: {os.getenv('SKIP_AUTH_TOKEN')}")
 
 
 class Settings(BaseSettings):
