@@ -1,487 +1,572 @@
 #!/usr/bin/env bash
 ################################################################################
-# setup.sh - Qwen API Environment Setup and Bearer Token Retrieval
-# 
-# This script:
-# - Validates Python installation
-# - Sets up uv package manager
-# - Creates virtual environment
-# - Installs Python dependencies
-# - Installs Playwright with system dependencies
-# - Retrieves Bearer token (automated or manual)
-#
-# Compatible with Ubuntu 24.04 (Noble) t64 library transitions
+# setup.sh - Complete Environment Setup for Qwen API Server
+# Features:
+# - Python environment setup with uv
+# - Dependency installation
+# - Playwright browser setup (with Ubuntu 24.04 compatibility)
+# - Bearer token extraction (automated + manual fallback)
+# - Environment validation
+# - Error handling and user guidance
 ################################################################################
 
-set -euo pipefail
+set -e
 
-# Color definitions
-readonly RED='\033[0;31m'
-readonly GREEN='\033[0;32m'
-readonly YELLOW='\033[1;33m'
-readonly BLUE='\033[0;34m'
-readonly CYAN='\033[0;36m'
-readonly WHITE='\033[1;37m'
-readonly BOLD='\033[1m'
-readonly NC='\033[0m'
+# Colors for better UX
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+MAGENTA='\033[0;35m'
+WHITE='\033[1;37m'
+BOLD='\033[1m'
+NC='\033[0m'
 
-# Project paths
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-readonly PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
-readonly VENV_DIR="${PROJECT_ROOT}/.venv"
-readonly ENV_FILE="${PROJECT_ROOT}/.env"
-readonly ENV_EXAMPLE="${PROJECT_ROOT}/.env.example"
-
-# Configuration
-readonly MIN_PYTHON_VERSION="3.8"
-readonly MIN_TOKEN_LENGTH=50
-
+# Script configuration
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 cd "$PROJECT_ROOT"
 
-################################################################################
-# Utility Functions
-################################################################################
+# Logging functions
+log_info() { echo -e "${BLUE}[INFO]${NC} $1"; }
+log_success() { echo -e "${GREEN}[SUCCESS]${NC} $1"; }
+log_warning() { echo -e "${YELLOW}[WARNING]${NC} $1"; }
+log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
+log_step() { echo -e "${MAGENTA}[STEP $1]${NC} $2"; }
 
-log_step() {
-    echo -e "${BLUE}[$1/$2]${NC} $3"
-}
-
-log_success() {
-    echo -e "${GREEN}✓${NC} $1"
-}
-
-log_warning() {
-    echo -e "${YELLOW}⚠${NC} $1"
-}
-
-log_error() {
-    echo -e "${RED}✗${NC} $1"
-}
-
-log_info() {
-    echo -e "${CYAN}$1${NC}"
-}
-
+# Header
 print_header() {
-    echo -e "${CYAN}${BOLD}═══════════════════════════════════════════════════════${NC}"
-    echo -e "${CYAN}${BOLD}    Qwen API - Environment Setup & Token Retrieval     ${NC}"
-    echo -e "${CYAN}${BOLD}═══════════════════════════════════════════════════════${NC}\n"
+    echo -e "${CYAN}${BOLD}"
+    echo "═══════════════════════════════════════════════════════════════════════════════"
+    echo "                   QWEN API - COMPLETE SETUP WIZARD"
+    echo "═══════════════════════════════════════════════════════════════════════════════"
+    echo -e "${NC}"
 }
 
+# Footer
 print_footer() {
-    echo -e "${GREEN}${BOLD}═══════════════════════════════════════════════════════${NC}"
-    echo -e "${GREEN}${BOLD}            Setup Complete! ✓                          ${NC}"
-    echo -e "${GREEN}${BOLD}═══════════════════════════════════════════════════════${NC}\n"
+    echo -e "${GREEN}${BOLD}"
+    echo "═══════════════════════════════════════════════════════════════════════════════"
+    echo "                         SETUP COMPLETED SUCCESSFULLY! ✓"
+    echo "═══════════════════════════════════════════════════════════════════════════════"
+    echo -e "${NC}"
 }
 
-version_compare() {
-    printf '%s\n%s' "$1" "$2" | sort -V | head -n1
-}
-
-################################################################################
-# Setup Functions
-################################################################################
-
-check_python() {
-    log_step 1 7 "Checking Python installation..."
+# Check system requirements
+check_system_requirements() {
+    log_step "1/8" "Checking system requirements..."
     
+    # Check Python
     if ! command -v python3 &> /dev/null; then
-        log_error "Python 3 not found!"
-        echo -e "${YELLOW}Please install Python 3.${MIN_PYTHON_VERSION}+ first${NC}\n"
+        log_error "Python 3 not found! Please install Python 3.8+"
         exit 1
     fi
     
-    local python_version
-    python_version=$(python3 --version | awk '{print $2}')
+    PYTHON_VERSION=$(python3 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}')")
+    log_info "Python version: $PYTHON_VERSION"
     
-    if [[ "$(version_compare "$python_version" "$MIN_PYTHON_VERSION")" == "$python_version" ]]; then
-        log_error "Python version $python_version is too old (minimum: $MIN_PYTHON_VERSION)"
+    # Check curl
+    if ! command -v curl &> /dev/null; then
+        log_error "curl not found! Please install curl"
         exit 1
     fi
     
-    log_success "Python $python_version found"
-    echo ""
+    # Detect OS
+    if [ -f /etc/os-release ]; then
+        . /etc/os-release
+        OS_NAME="$NAME"
+        OS_VERSION="$VERSION_ID"
+    else
+        OS_NAME="$(uname -s)"
+        OS_VERSION="$(uname -r)"
+    fi
+    log_info "Detected OS: $OS_NAME $OS_VERSION"
+    
+    log_success "System requirements satisfied"
 }
 
-setup_uv() {
-    log_step 2 7 "Setting up uv package manager..."
+# Install uv package manager
+install_uv() {
+    log_step "2/8" "Setting up UV package manager..."
     
     if ! command -v uv &> /dev/null; then
-        log_warning "uv not found, installing..."
+        log_warning "UV not found, installing..."
+        
+        # Install uv
         curl -LsSf https://astral.sh/uv/install.sh | sh
+        
+        # Add to PATH for current session
         export PATH="$HOME/.cargo/bin:$PATH"
-        log_success "uv installed"
+        
+        # Verify installation
+        if ! command -v uv &> /dev/null; then
+            log_error "UV installation failed!"
+            exit 1
+        fi
+        
+        log_success "UV installed successfully"
     else
-        log_success "uv already installed"
+        UV_VERSION=$(uv --version)
+        log_success "UV already installed: $UV_VERSION"
     fi
-    echo ""
 }
 
-create_venv() {
-    log_step 3 7 "Setting up virtual environment..."
+# Create virtual environment
+setup_virtual_environment() {
+    log_step "3/8" "Setting up Python virtual environment..."
     
-    if [[ -d "$VENV_DIR" ]]; then
-        log_success "Virtual environment already exists"
-    else
-        uv venv "$VENV_DIR"
+    if [ ! -d ".venv" ]; then
+        log_info "Creating virtual environment..."
+        uv venv
+        
+        if [ ! -d ".venv" ]; then
+            log_error "Virtual environment creation failed!"
+            exit 1
+        fi
+        
         log_success "Virtual environment created"
-    fi
-    echo ""
-}
-
-install_dependencies() {
-    log_step 4 7 "Installing Python dependencies..."
-    
-    # shellcheck source=/dev/null
-    source "$VENV_DIR/bin/activate"
-    
-    uv pip install -r requirements.txt --quiet
-    log_success "Core dependencies installed"
-    
-    pip install pytest-playwright --quiet 2>/dev/null || pip install pytest-playwright
-    log_success "Playwright Python package installed"
-    echo ""
-}
-
-detect_os() {
-    local os_id version_id
-    
-    if [[ -f /etc/os-release ]]; then
-        # shellcheck source=/dev/null
-        source /etc/os-release
-        os_id="$ID"
-        version_id="$VERSION_ID"
     else
-        os_id=$(uname -s)
-        version_id=""
+        log_success "Virtual environment already exists"
     fi
     
-    echo "$os_id $version_id"
+    # Activate virtual environment
+    source .venv/bin/activate
 }
 
-install_playwright_ubuntu_noble() {
-    log_warning "Ubuntu 24.04 detected - installing t64 compatible dependencies"
+# Install dependencies
+install_dependencies() {
+    log_step "4/8" "Installing Python dependencies..."
     
-    local sudo_cmd=""
-    [[ "$EUID" -ne 0 ]] && sudo_cmd="sudo"
+    # Check if requirements.txt exists
+    if [ ! -f "requirements.txt" ]; then
+        log_error "requirements.txt not found!"
+        exit 1
+    fi
     
-    log_info "Installing system dependencies..."
+    log_info "Installing from requirements.txt..."
+    if uv pip install -r requirements.txt; then
+        log_success "Main dependencies installed"
+    else
+        log_error "Failed to install main dependencies"
+        exit 1
+    fi
     
-    # Ubuntu 24.04 (Noble) specific t64 libraries
-    local -a packages=(
-        libasound2t64
-        libatk-bridge2.0-0t64
-        libatk1.0-0t64
-        libatspi2.0-0t64
-        libcups2t64
-        libdrm2
-        libgbm1
-        libglib2.0-0t64
-        libnspr4
-        libnss3
-        libpango-1.0-0
-        libx11-6
-        libxcb1
-        libxcomposite1
-        libxdamage1
-        libxext6
-        libxfixes3
-        libxkbcommon0
-        libxrandr2
-        xvfb
-        fonts-liberation
-        fonts-noto-color-emoji
+    # Install Playwright for Python
+    log_info "Installing Playwright Python package..."
+    if uv pip install playwright pytest-playwright; then
+        log_success "Playwright Python package installed"
+    else
+        log_error "Failed to install Playwright"
+        exit 1
+    fi
+}
+
+# Install system dependencies and browser
+install_system_dependencies() {
+    log_step "5/8" "Installing system dependencies and browser..."
+    
+    # Install system dependencies based on OS
+    case "$OS_NAME" in
+        *Ubuntu*|*Debian*)
+            install_ubuntu_dependencies
+            ;;
+        *CentOS*|*Red*Hat*|*Fedora*)
+            install_centos_dependencies
+            ;;
+        *Darwin*|*Mac*)
+            install_macos_dependencies
+            ;;
+        *)
+            log_warning "Unsupported OS: $OS_NAME - attempting generic installation"
+            install_generic_dependencies
+            ;;
+    esac
+    
+    # Install Chromium browser
+    log_info "Installing Chromium browser..."
+    if python3 -m playwright install chromium; then
+        log_success "Chromium browser installed"
+    else
+        log_warning "Chromium installation had issues, but continuing..."
+    fi
+}
+
+# Ubuntu/Debian specific dependencies
+install_ubuntu_dependencies() {
+    log_info "Installing Ubuntu/Debian dependencies..."
+    
+    # Handle Ubuntu 24.04+ with t64 libraries
+    if [[ "$OS_VERSION" == "24.04" || "$OS_VERSION" > "24.04" ]]; then
+        log_info "Ubuntu 24.04+ detected - installing t64 compatible packages"
+        
+        local packages=(
+            libasound2t64 libatk-bridge2.0-0t64 libatk1.0-0t64
+            libatspi2.0-0t64 libcups2t64 libdrm2 libgbm1
+            libglib2.0-0t64 libnspr4 libnss3 libpango-1.0-0
+            libx11-6 libxcb1 libxcomposite1 libxdamage1
+            libxext6 libxfixes3 libxkbcommon0 libxrandr2
+            xvfb fonts-liberation fonts-noto-color-emoji
+            libnss3-dev libgdk-pixbuf2.0-dev libgtk-3-dev
+        )
+    else
+        # Standard Ubuntu/Debian packages
+        local packages=(
+            libasound2 libatk-bridge2.0-0 libatk1.0-0
+            libatspi2.0-0 libcups2 libdrm2 libgbm1
+            libglib2.0-0 libnspr4 libnss3 libpango-1.0-0
+            libx11-6 libxcb1 libxcomposite1 libxdamage1
+            libxext6 libxfixes3 libxkbcommon0 libxrandr2
+            xvfb fonts-liberation fonts-noto-color-emoji
+            libnss3-dev libgdk-pixbuf2.0-dev libgtk-3-dev
+        )
+    fi
+    
+    if [ "$EUID" -ne 0 ]; then
+        log_info "Installing system packages (requires sudo)..."
+        sudo apt-get update -qq
+        sudo apt-get install -y -qq "${packages[@]}"
+    else
+        apt-get update -qq
+        apt-get install -y -qq "${packages[@]}"
+    fi
+    
+    log_success "Ubuntu/Debian dependencies installed"
+}
+
+# CentOS/RHEL/Fedora specific dependencies
+install_centos_dependencies() {
+    log_info "Installing CentOS/RHEL/Fedora dependencies..."
+    
+    local packages=(
+        alsa-lib-devel atk-devel cups-devel dbus-devel
+        gdk-pixbuf2-devel glib2-devel gtk3-devel
+        libXcomposite-devel libXdamage-devel libXrandr-devel
+        libxkbcommon-devel mesa-libgbm-devel nss-devel
+        pango-devel xorg-x11-server-Xvfb
+        liberation-fonts noto-emoji-fonts
     )
     
-    $sudo_cmd apt-get update -qq
-    $sudo_cmd apt-get install -y -qq "${packages[@]}" 2>&1 | \
-        grep -v "Selecting previously unselected\|Unpacking\|Setting up" || true
-    
-    log_success "System dependencies installed"
-    
-    log_info "Installing Chromium browser..."
-    playwright install chromium --quiet 2>/dev/null || playwright install chromium
-    log_success "Chromium browser installed"
-}
-
-install_playwright_standard() {
-    local sudo_cmd=""
-    [[ "$EUID" -ne 0 ]] && sudo_cmd="sudo"
-    
-    log_info "Installing Playwright system dependencies..."
-    
-    if $sudo_cmd playwright install-deps chromium --quiet 2>/dev/null; then
-        log_success "System dependencies installed"
-    else
-        log_warning "Standard installation method, using alternative approach..."
-        $sudo_cmd playwright install-deps chromium
-    fi
-    
-    log_info "Installing Chromium browser..."
-    playwright install chromium --quiet 2>/dev/null || playwright install chromium
-    log_success "Chromium browser installed"
-}
-
-install_playwright() {
-    log_step 5 7 "Installing Playwright and system dependencies..."
-    
-    local os_info
-    os_info=$(detect_os)
-    log_info "Detected OS: $os_info"
-    
-    if [[ "$os_info" == "ubuntu 24.04" ]]; then
-        install_playwright_ubuntu_noble
-    else
-        install_playwright_standard
-    fi
-    echo ""
-}
-
-create_env_file() {
-    if [[ -f "$ENV_EXAMPLE" ]]; then
-        cp "$ENV_EXAMPLE" "$ENV_FILE"
-    else
-        cat > "$ENV_FILE" << 'EOF'
-QWEN_EMAIL=your-email@example.com
-QWEN_PASSWORD=your-password
-LISTEN_PORT=8096
-ANONYMOUS_MODE=true
-DEBUG_LOGGING=true
-EOF
-    fi
-}
-
-load_env() {
-    set -a
-    # shellcheck source=/dev/null
-    source "$ENV_FILE"
-    set +a
-}
-
-validate_credentials() {
-    if [[ -z "${QWEN_EMAIL:-}" ]] || [[ "$QWEN_EMAIL" == "your-email@example.com" ]]; then
-        log_error "QWEN_EMAIL not properly configured in .env"
-        log_warning "Please edit .env and add your real email address"
-        return 1
-    fi
-    
-    if [[ -z "${QWEN_PASSWORD:-}" ]] || [[ "$QWEN_PASSWORD" == "your-password" ]]; then
-        log_error "QWEN_PASSWORD not properly configured in .env"
-        log_warning "Please edit .env and add your real password"
-        return 1
-    fi
-    
-    return 0
-}
-
-check_existing_token() {
-    if [[ -n "${QWEN_BEARER_TOKEN:-}" ]] && [[ "$QWEN_BEARER_TOKEN" != "your-bearer-token-here" ]]; then
-        log_success "Bearer token found in .env (${#QWEN_BEARER_TOKEN} chars)"
-        log_info "Token preview: ${QWEN_BEARER_TOKEN:0:30}...${QWEN_BEARER_TOKEN: -30}"
-        return 0
-    fi
-    return 1
-}
-
-extract_token_automated() {
-    log_info "Method 1: Automated Playwright extraction..."
-    
-    local log_file="/tmp/token_extraction_$$.log"
-    
-    if python3 test_auth.py > "$log_file" 2>&1; then
-        local token
-        token=$(grep "QWEN_BEARER_TOKEN=" "$log_file" | cut -d'=' -f2)
-        
-        if [[ -n "$token" ]]; then
-            save_token_to_env "$token"
-            log_success "Bearer token extracted and saved (${#token} chars)"
-            log_info "Token preview: ${token:0:30}...${token: -30}"
-            rm -f "$log_file"
-            return 0
+    if command -v dnf &> /dev/null; then
+        if [ "$EUID" -ne 0 ]; then
+            sudo dnf install -y "${packages[@]}"
         else
-            log_warning "Automated extraction didn't find token"
-            cat "$log_file"
-            rm -f "$log_file"
-            return 1
+            dnf install -y "${packages[@]}"
+        fi
+    elif command -v yum &> /dev/null; then
+        if [ "$EUID" -ne 0 ]; then
+            sudo yum install -y "${packages[@]}"
+        else
+            yum install -y "${packages[@]}"
+        fi
+    fi
+    
+    log_success "CentOS/RHEL/Fedora dependencies installed"
+}
+
+# macOS specific dependencies
+install_macos_dependencies() {
+    log_info "Installing macOS dependencies..."
+    
+    if command -v brew &> /dev/null; then
+        brew install libomp
+    else
+        log_warning "Homebrew not found - some dependencies may be missing"
+    fi
+    
+    log_success "macOS dependencies handled"
+}
+
+# Generic dependency installation
+install_generic_dependencies() {
+    log_info "Attempting generic system dependency installation..."
+    
+    if command -v playwright &> /dev/null; then
+        if [ "$EUID" -ne 0 ]; then
+            sudo playwright install-deps chromium || true
+        else
+            playwright install-deps chromium || true
         fi
     else
-        log_warning "Automated extraction failed"
-        cat "$log_file"
-        rm -f "$log_file"
-        return 1
-    fi
-}
-
-print_manual_instructions() {
-    echo -e "\n${BLUE}Method 2:${NC} Manual token extraction"
-    echo -e "${CYAN}${BOLD}═══════════════════════════════════════════════════════${NC}"
-    echo -e "${YELLOW}Please follow these steps to get your token manually:${NC}\n"
-    
-    echo -e "${WHITE}1.${NC} Open your browser and go to: ${CYAN}https://chat.qwen.ai${NC}"
-    echo -e "${WHITE}2.${NC} Log in to your Qwen account"
-    echo -e "${WHITE}3.${NC} Press ${BOLD}F12${NC} to open Developer Console"
-    echo -e "${WHITE}4.${NC} Go to the ${BOLD}Console${NC} tab"
-    echo -e "${WHITE}5.${NC} Copy and paste this JavaScript code:\n"
-    
-    echo -e "${CYAN}─────────────────────────────────────────────────────────${NC}"
-    cat << 'JSEOF'
-javascript:(function(){
-    if(window.location.hostname!=="chat.qwen.ai"){
-        alert("🚀 Please run this on chat.qwen.ai");
-        window.open("https://chat.qwen.ai","_blank");
-        return;
-    }
-    const token=localStorage.getItem("token");
-    if(!token){
-        alert("❌ Token not found in localStorage!");
-        console.log("Available localStorage keys:", Object.keys(localStorage));
-        return;
-    }
-    navigator.clipboard.writeText(token).then(()=>{
-        alert("🔑 Token copied to clipboard! 🎉");
-        console.log("Token length:", token.length, "characters");
-    }).catch(()=>{
-        prompt("🔰 Your token (copy it manually):", token);
-    });
-})();
-JSEOF
-    echo -e "${CYAN}─────────────────────────────────────────────────────────${NC}\n"
-    
-    echo -e "${WHITE}6.${NC} Press ${BOLD}Enter${NC} to run the code"
-    echo -e "${WHITE}7.${NC} The token will be copied to your clipboard"
-    echo -e "${WHITE}8.${NC} Paste it below when prompted\n"
-}
-
-extract_token_manual() {
-    print_manual_instructions
-    
-    echo -e "${YELLOW}After you have the token, press Enter to continue...${NC}"
-    read -r
-    
-    echo -e "${CYAN}Please paste your Bearer token:${NC}"
-    read -r manual_token
-    
-    if [[ -z "$manual_token" ]]; then
-        log_error "No token provided"
-        return 1
+        python3 -m playwright install-deps chromium || true
     fi
     
-    # Trim whitespace
-    manual_token=$(echo "$manual_token" | xargs)
-    
-    # Validate token length
-    if [[ ${#manual_token} -lt $MIN_TOKEN_LENGTH ]]; then
-        log_error "Token seems too short (${#manual_token} chars). Expected > $MIN_TOKEN_LENGTH chars"
-        log_warning "Please run the script again and make sure to copy the full token"
-        return 1
-    fi
-    
-    save_token_to_env "$manual_token"
-    log_success "Bearer token saved to .env (${#manual_token} chars)"
-    log_info "Token preview: ${manual_token:0:30}...${manual_token: -30}"
-    return 0
+    log_warning "Generic installation attempted - may need manual intervention"
 }
 
-save_token_to_env() {
-    local token="$1"
+# Setup environment configuration
+setup_environment() {
+    log_step "6/8" "Setting up environment configuration..."
     
-    if grep -q "QWEN_BEARER_TOKEN=" "$ENV_FILE"; then
-        # Update existing token
-        sed -i.bak "s|QWEN_BEARER_TOKEN=.*|QWEN_BEARER_TOKEN=$token|" "$ENV_FILE"
-    else
-        # Add new token
-        echo "" >> "$ENV_FILE"
-        echo "QWEN_BEARER_TOKEN=$token" >> "$ENV_FILE"
-    fi
-}
-
-retrieve_token() {
-    log_step 6 7 "Retrieving Bearer Token..."
-    
-    # Check if .env exists
-    if [[ ! -f "$ENV_FILE" ]]; then
+    # Create .env from example if it doesn't exist
+    if [ ! -f ".env" ]; then
         log_warning ".env file not found, creating from template..."
-        create_env_file
-        log_warning "Please edit .env and add your QWEN_EMAIL and QWEN_PASSWORD"
-        log_warning "Then run this script again"
-        echo ""
-        exit 1
+        
+        if [ -f ".env.example" ]; then
+            cp .env.example .env
+            log_success "Created .env from .env.example"
+        else
+            # Create basic .env file
+            cat > .env << 'EOF'
+# Qwen API Configuration
+QWEN_EMAIL=your-email@example.com
+QWEN_PASSWORD=your-password-here
+QWEN_BEARER_TOKEN=your-bearer-token-here
+
+# Server Configuration
+LISTEN_PORT=8096
+HOST=0.0.0.0
+LOG_LEVEL=INFO
+
+# Feature Flags
+ANONYMOUS_MODE=false
+DEBUG_LOGGING=true
+ENABLE_RATE_LIMITING=true
+
+# API Settings
+MAX_TOKENS=4096
+TIMEOUT=30
+EOF
+            log_success "Created basic .env file"
+        fi
+        
+        log_warning "Please edit .env and add your Qwen credentials"
+    else
+        log_success ".env file already exists"
     fi
+    
+    # Validate .env structure
+    if ! grep -q "QWEN_EMAIL" .env || ! grep -q "QWEN_PASSWORD" .env; then
+        log_warning ".env file may be missing required Qwen credentials"
+    fi
+}
+
+# Extract bearer token
+extract_bearer_token() {
+    log_step "7/8" "Extracting Bearer Token..."
     
     # Load environment variables
-    load_env
+    set -a
+    source .env
+    set +a
     
     # Check if we already have a valid token
-    if check_existing_token; then
-        echo ""
+    if [ -n "$QWEN_BEARER_TOKEN" ] && [ "$QWEN_BEARER_TOKEN" != "your-bearer-token-here" ]; then
+        log_success "Bearer token already configured"
+        echo -e "${CYAN}Token preview: ${QWEN_BEARER_TOKEN:0:20}...${QWEN_BEARER_TOKEN: -20}${NC}"
+        echo -e "${CYAN}Token length: ${#QWEN_BEARER_TOKEN} characters${NC}"
         return 0
     fi
     
-    # Validate credentials
-    if ! validate_credentials; then
+    # Check if credentials are configured
+    if [ -z "$QWEN_EMAIL" ] || [ "$QWEN_EMAIL" = "your-email@example.com" ] || \
+       [ -z "$QWEN_PASSWORD" ] || [ "$QWEN_PASSWORD" = "your-password-here" ]; then
+        log_error "Qwen credentials not properly configured in .env"
+        echo -e "${YELLOW}Please edit .env and add your real email and password:${NC}"
+        echo -e "  ${WHITE}QWEN_EMAIL=your-real-email@example.com${NC}"
+        echo -e "  ${WHITE}QWEN_PASSWORD=your-real-password${NC}"
         echo ""
+        echo -e "${YELLOW}Then run this script again.${NC}"
         exit 1
     fi
     
-    log_info "Attempting to extract Bearer token..."
-    echo ""
+    log_info "Attempting automated token extraction..."
     
-    # Try automated extraction first
-    if extract_token_automated; then
-        echo ""
-        return 0
+    # Try automated extraction
+    if python3 scripts/test_auth.py > /tmp/token_extraction.log 2>&1; then
+        # Extract token from output
+        TOKEN=$(grep "QWEN_BEARER_TOKEN=" /tmp/token_extraction.log | cut -d'=' -f2 | tr -d '[:space:]')
+        
+        if [ -n "$TOKEN" ] && [ ${#TOKEN} -gt 50 ]; then
+            save_bearer_token "$TOKEN"
+            return 0
+        fi
     fi
     
-    # Fall back to manual extraction
-    if extract_token_manual; then
-        echo ""
-        return 0
+    log_warning "Automated extraction failed, using manual method..."
+    manual_token_extraction
+}
+
+# Save bearer token to .env
+save_bearer_token() {
+    local token="$1"
+    
+    log_info "Saving bearer token to .env..."
+    
+    # Create backup
+    cp .env .env.backup.$(date +%Y%m%d_%H%M%S)
+    
+    # Update or add token
+    if grep -q "QWEN_BEARER_TOKEN=" .env; then
+        sed -i.tmp "s|QWEN_BEARER_TOKEN=.*|QWEN_BEARER_TOKEN=$token|" .env
+        rm -f .env.tmp
+    else
+        echo "QWEN_BEARER_TOKEN=$token" >> .env
     fi
     
-    log_error "Failed to retrieve Bearer token"
-    echo ""
-    exit 1
+    log_success "Bearer token saved to .env"
+    echo -e "${CYAN}Token length: ${#token} characters${NC}"
+    echo -e "${CYAN}Token preview: ${token:0:20}...${token: -20}${NC}"
 }
 
-print_status() {
-    log_step 7 7 "Verifying installation..."
+# Manual token extraction fallback
+manual_token_extraction() {
+    log_warning "Automated token extraction unavailable or failed"
+    echo -e "${YELLOW}${BOLD}Manual Token Extraction Required${NC}"
+    echo -e "${CYAN}═══════════════════════════════════════════════════════════════════════════════${NC}"
+    echo ""
+    echo -e "${WHITE}Follow these steps to get your Bearer Token:${NC}"
+    echo ""
+    echo -e "  ${BOLD}1.${NC} ${WHITE}Open your browser and go to: ${CYAN}https://chat.qwen.ai${NC}"
+    echo -e "  ${BOLD}2.${NC} ${WHITE}Log in with your Qwen account${NC}"
+    echo -e "  ${BOLD}3.${NC} ${WHITE}Press ${BOLD}F12${NC} to open Developer Tools${NC}"
+    echo -e "  ${BOLD}4.${NC} ${WHITE}Go to the ${BOLD}Console${NC} tab${NC}"
+    echo -e "  ${BOLD}5.${NC} ${WHITE}Copy and paste this code:${NC}"
+    echo ""
+    echo -e "${CYAN}───────────────────────────────────────────────────────────────────────────────${NC}"
+    cat << 'JSCODE'
+// Token Extraction Script for Qwen
+(function() {
+    if (window.location.hostname !== "chat.qwen.ai") {
+        alert("Please navigate to https://chat.qwen.ai first!");
+        window.open("https://chat.qwen.ai", "_blank");
+        return;
+    }
     
-    local python_version
-    python_version=$(python3 --version | awk '{print $2}')
+    const token = localStorage.getItem("token");
+    if (!token) {
+        const keys = Object.keys(localStorage);
+        console.log("Available localStorage keys:", keys);
+        alert("Token not found in 'token' key. Check console for available keys.");
+        return;
+    }
     
-    echo -e "${CYAN}Environment Status:${NC}"
-    echo -e "  ${BLUE}Python:${NC} $python_version"
-    echo -e "  ${BLUE}Virtual Env:${NC} .venv"
-    echo -e "  ${BLUE}Dependencies:${NC} ${GREEN}✓${NC} Installed"
-    echo -e "  ${BLUE}Playwright:${NC} ${GREEN}✓${NC} Ready"
-    echo -e "  ${BLUE}Bearer Token:${NC} ${GREEN}✓${NC} Configured"
+    // Try to copy to clipboard
+    navigator.clipboard.writeText(token).then(() => {
+        alert(`✅ Token copied to clipboard! (${token.length} chars)`);
+        console.log("Token:", token);
+    }).catch(() => {
+        // Fallback: show prompt
+        prompt("📋 Copy your token (select and press Ctrl+C):", token);
+    });
+})();
+JSCODE
+    echo -e "${CYAN}───────────────────────────────────────────────────────────────────────────────${NC}"
     echo ""
+    echo -e "  ${BOLD}6.${NC} ${WHITE}Press ${BOLD}Enter${NC} to execute the code${NC}"
+    echo -e "  ${BOLD}7.${NC} ${WHITE}The token will be copied to your clipboard${NC}"
+    echo -e "  ${BOLD}8.${NC} ${WHITE}Paste it below when prompted${NC}"
+    echo ""
+    echo -e "${YELLOW}Press Enter to continue and paste your token...${NC}"
+    read -r
+    
+    echo -e "${CYAN}Please paste your Bearer Token:${NC}"
+    read -r MANUAL_TOKEN
+    
+    # Clean the token
+    MANUAL_TOKEN=$(echo "$MANUAL_TOKEN" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+    
+    # Validate token
+    if [ -z "$MANUAL_TOKEN" ]; then
+        log_error "No token provided!"
+        exit 1
+    fi
+    
+    if [ ${#MANUAL_TOKEN} -lt 50 ]; then
+        log_warning "Token seems short (${#MANUAL_TOKEN} chars). Expected > 50 characters."
+        echo -e "${YELLOW}Are you sure this is the correct token? (y/N):${NC}"
+        read -r CONFIRM
+        if [[ ! $CONFIRM =~ ^[Yy]$ ]]; then
+            log_error "Token rejected by user"
+            exit 1
+        fi
+    fi
+    
+    save_bearer_token "$MANUAL_TOKEN"
 }
 
-print_next_steps() {
-    echo -e "${CYAN}Next Steps:${NC}"
-    echo -e "  ${YELLOW}→${NC} Run ${BOLD}bash scripts/start.sh${NC} to start the server"
-    echo -e "  ${YELLOW}→${NC} Run ${BOLD}bash scripts/all.sh${NC} for complete deployment + testing"
-    echo ""
+# Final validation and summary
+final_validation() {
+    log_step "8/8" "Final validation and cleanup..."
+    
+    # Reload environment to verify token
+    set -a
+    source .env
+    set +a
+    
+    # Verify token is loadable
+    if [ -n "$QWEN_BEARER_TOKEN" ]; then
+        log_success "✓ Token loads successfully into environment"
+    else
+        log_error "✗ Token failed to load into environment"
+        exit 1
+    fi
+    
+    # Test token with Python
+    log_info "Validating token with Python..."
+    if python3 -c "
+import os
+from dotenv import load_dotenv
+load_dotenv()
+token = os.getenv('QWEN_BEARER_TOKEN')
+if token and len(token) > 50:
+    print('✅ Token validated successfully')
+    print(f'   Length: {len(token)} characters')
+else:
+    print('❌ Token validation failed')
+    exit(1)
+"; then
+        log_success "Token validation passed"
+    else
+        log_error "Token validation failed"
+        exit 1
+    fi
+    
+    # Cleanup
+    rm -f /tmp/token_extraction.log .env.tmp .env.bak
+    
+    log_success "Setup validation completed"
 }
 
-################################################################################
-# Main Execution
-################################################################################
-
+# Main execution
 main() {
     print_header
     
-    check_python
-    setup_uv
-    create_venv
+    # Check if we're in the right directory
+    if [ ! -f "requirements.txt" ] && [ ! -f "main.py" ]; then
+        log_error "Please run this script from the project root directory"
+        exit 1
+    fi
+    
+    # Execute setup steps
+    check_system_requirements
+    install_uv
+    setup_virtual_environment
     install_dependencies
-    install_playwright
-    retrieve_token
-    print_status
+    install_system_dependencies
+    setup_environment
+    extract_bearer_token
+    final_validation
     
     print_footer
-    print_next_steps
+    
+    # Show next steps
+    echo -e "${CYAN}${BOLD}Next Steps:${NC}"
+    echo -e "  ${GREEN}→${NC} ${WHITE}Start the server:${NC} ${BOLD}bash scripts/start.sh${NC}"
+    echo -e "  ${GREEN}→${NC} ${WHITE}Test the API:${NC} ${BOLD}bash scripts/send_request.sh${NC}"
+    echo -e "  ${GREEN}→${NC} ${WHITE}Run complete test suite:${NC} ${BOLD}bash scripts/all.sh${NC}"
+    echo ""
+    echo -e "${CYAN}Your environment is now ready! The Bearer Token has been configured.${NC}"
+    echo ""
+    
+    # Offer to start server
+    echo -e "${YELLOW}Would you like to start the server now? (y/N):${NC}"
+    read -r start_server
+    if [[ $start_server =~ ^[Yy]$ ]]; then
+        echo ""
+        bash scripts/start.sh
+    fi
 }
 
+# Run main function
 main "$@"
