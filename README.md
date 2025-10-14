@@ -51,139 +51,18 @@ git clone https://github.com/Zeeeepa/qwen-api.git
 cd qwen-api
 
 # Install package in development mode
-pip install -e .
+export QWEN_EMAIL=developer@pixelium.uk
+export QWEN_PASSWORD=<PasswordFromEnvironmentVariables>
+# Or 
+nano .env 
+QWEN_EMAI=developer@pixelium.uk
+QWEN_PASSWORD=<PasswordFromEnvironmentVariables>
+# Then proceed setupping and starting server + sending real open ai api request.
+bash scripts/setup.sh
+bash scripts/start.sh
+bash scripts/send_request.sh
+bash scripts/all.sh 
 
-# Copy environment template
-cp .env.example .env
-
-# Edit .env with your Qwen credentials
-# Required: QWEN_EMAIL and QWEN_PASSWORD
-nano .env  # or use your preferred editor
-
-# Start server!
-python main.py
-```
-
-**✅ FlareProx auto-initializes on startup if credentials are configured!**
-
-Server starts at `http://localhost:8080` with automatic:
-- ✅ Provider initialization
-- ✅ FlareProx proxy creation (if enabled)
-- ✅ Intelligent load balancing
-- ✅ Auto-scaling based on traffic
-
-### Configuration
-
-Edit `.env` file with your credentials:
-
-```env
-# Provider Credentials
-
-QWEN_EMAIL=your_email@example.com
-QWEN_PASSWORD=your_password
-
-# Optional: FlareProx for unlimited scalability
-FLAREPROX_ENABLED=true
-CLOUDFLARE_API_TOKEN=your_token
-CLOUDFLARE_ACCOUNT_ID=your_account_id
-FLAREPROX_PROXY_COUNT=3
-```
-
----
-
-## 🐳 Docker Deployment
-
-### Quick Deploy
-
-```bash
-# Copy and configure environment
-cp .env.example .env
-# Edit .env with your credentials
-
-# Deploy with Docker
-cd docker
-./deploy.sh
-```
-
-### Manual Docker Commands
-
-```bash
-# Build and start
-docker-compose -f docker/docker-compose.yml up -d
-
-# View logs
-docker-compose -f docker/docker-compose.yml logs -f
-
-# Stop
-docker-compose -f docker/docker-compose.yml down
-```
-
----
-
-## 🔥 FlareProx Integration
-
-FlareProx enables **unlimited scalability** by routing requests through Cloudflare Workers, providing:
-
-- ✅ **IP Rotation** - Automatic IP address rotation
-- ✅ **Rate Limit Bypass** - Distribute requests across multiple endpoints
-- ✅ **Free Tier** - 100,000 requests/day per worker
-- ✅ **Global CDN** - Cloudflare's edge network
-
-### Setup FlareProx
-
-**FlareProx is now AUTOMATIC! Just configure and start!**
-
-1. **Get Cloudflare Credentials**:
-   - Sign up at [cloudflare.com](https://cloudflare.com)
-   - Create API token: [https://dash.cloudflare.com/profile/api-tokens](https://dash.cloudflare.com/profile/api-tokens)
-   - Use "Edit Cloudflare Workers" template
-   - Copy token and Account ID
-
-2. **Configure .env**:
-```env
-FLAREPROX_ENABLED=true
-CLOUDFLARE_API_TOKEN=your_token_here
-CLOUDFLARE_ACCOUNT_ID=your_account_id
-FLAREPROX_PROXY_COUNT=3  # Number of proxy endpoints
-FLAREPROX_AUTO_ROTATE=true
-```
-
-3. **Start Server** (FlareProx auto-initializes!):
-```bash
-python main.py
-```
-
-That's it! FlareProx will:
-- ✅ Auto-create proxy workers on startup
-- ✅ Load balance across all proxies
-- ✅ Auto-rotate every 100 requests
-- ✅ Scale automatically with traffic
-
-**Optional Manual Management**:
-```bash
-# View active proxies
-python flareprox.py list
-
-# Create additional proxies
-python flareprox.py create --count 5
-
-# Cleanup all proxies
-python flareprox.py cleanup
-```
-
-### How FlareProx Works
-
-```
-Client Request → QWEN2API Router → FlareProx Pool (3+ endpoints)
-                                    ↓ (auto-rotate)
-                                 Cloudflare Worker #1 → Provider API
-                                 Cloudflare Worker #2 → Provider API  
-                                 Cloudflare Worker #3 → Provider API
-```
-
-Each worker gets **100,000 requests/day**, so 3 workers = **300,000 requests/day** for free!
-
----
 
 ## 📖 API Documentation
 
@@ -198,19 +77,12 @@ All API requests require a Bearer token containing your Qwen credentials.
 
 ### Getting Your Qwen Token
 
-**Option 1: Use Temporary Test Token (Quick Start)**
 
-For testing purposes, use this temporary token:
-```
-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjI3ZGUyYzVlLTYzZDYtNDU2MC1iNmQ3LTI2MDk0NDhjZmJmNiIsImxhc3RfcGFzc3dvcmRfY2hhbmdlIjoxNzU5ODg4MzE5LCJleHAiOjE3NjA3NDg4MTF9.NXiiJQMCmw4NCjBoyE_gADBOp8XOTGXWAAJgUjCSx7A
-```
-⚠️ **Expires**: 2025-10-18 00:53:31 UTC
+USE PLAYWRIGHT TO LOG IN TO QWEN account 
 
-**Option 2: Get Your Own Token**
+Login: "https://chat.qwen.ai/auth?action=signin"
 
-1. Visit [chat.qwen.ai](https://chat.qwen.ai) and log in
-2. Open Developer Console (F12 → Console tab)
-3. Run this JavaScript code:
+To use in setup.sh step set qwen email and password to log in-> and then properly use this JS code to copy token ->
 ```javascript
 javascript:(function(){if(window.location.hostname!=="chat.qwen.ai"){alert("🚀 This code is for chat.qwen.ai");window.open("https://chat.qwen.ai","_blank");return;}
 function getApiKeyData(){const token=localStorage.getItem("token");if(!token){alert("❌ qwen access_token not found !!!");return null;}
@@ -218,8 +90,8 @@ return token;}
 async function copyToClipboard(text){try{await navigator.clipboard.writeText(text);return true;}catch(err){console.error("❌ Failed to copy to clipboard:",err);const textarea=document.createElement("textarea");textarea.value=text;textarea.style.position="fixed";textarea.style.opacity="0";document.body.appendChild(textarea);textarea.focus();textarea.select();const success=document.execCommand("copy");document.body.removeChild(textarea);return success;}}
 const apiKeyData=getApiKeyData();if(!apiKeyData)return;copyToClipboard(apiKeyData).then((success)=>{if(success){alert("🔑 Qwen access_token copied to clipboard !!! 🎉");}else{prompt("🔰 Qwen access_token:",apiKeyData);}});})();
 ```
-4. Your token will be copied to clipboard
-5. Use it in your API requests
+AFTER TOKEN IS COPIED -> IT SHOULD BE PASTED INTO .env file and saved. 
+
 
 ### Using Authentication
 
@@ -235,35 +107,15 @@ curl http://localhost:8080/v1/chat/completions \
   }'
 ```
 
-### Endpoints
-
-#### Chat Completions
-```bash
-POST /v1/chat/completions
-
-curl http://localhost:8080/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_QWEN_TOKEN" \
-  -d '{
-    "model": "QWEN",
-    "messages": [{"role": "user", "content": "Hello!"}],
-    "stream": false
-  }'
+THIS TO BE IMPLEMENTED WITH PLAYWRIGHT.
+```javascript
+javascript:(function(){if(window.location.hostname!=="chat.qwen.ai"){alert("🚀 This code is for chat.qwen.ai");window.open("https://chat.qwen.ai","_blank");return;}
+function getApiKeyData(){const token=localStorage.getItem("token");if(!token){alert("❌ qwen access_token not found !!!");return null;}
+return token;}
+async function copyToClipboard(text){try{await navigator.clipboard.writeText(text);return true;}catch(err){console.error("❌ Failed to copy to clipboard:",err);const textarea=document.createElement("textarea");textarea.value=text;textarea.style.position="fixed";textarea.style.opacity="0";document.body.appendChild(textarea);textarea.focus();textarea.select();const success=document.execCommand("copy");document.body.removeChild(textarea);return success;}}
+const apiKeyData=getApiKeyData();if(!apiKeyData)return;copyToClipboard(apiKeyData).then((success)=>{if(success){alert("🔑 Qwen access_token copied to clipboard !!! 🎉");}else{prompt("🔰 Qwen access_token:",apiKeyData);}});})();
 ```
 
-#### List Models
-```bash
-GET /v1/models
-
-curl http://localhost:8080/v1/models
-```
-
-#### Health Check
-```bash
-GET /health
-
-curl http://localhost:8080/health
-```
 
 ### Supported Features
 
@@ -274,154 +126,11 @@ curl http://localhost:8080/health
 - ✅ **Multimodal** - Images, video (model-dependent)
 - ✅ **Temperature & Parameters** - `temperature`, `max_tokens`, `top_p`
 
-### Example: Using Thinking Mode
-
-```bash
-curl http://localhost:8080/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "QWEN",
-    "messages": [
-      {"role": "user", "content": "Explain quantum computing"}
-    ],
-    "stream": false
-  }'
-```
-
----
-
-
----
-
-## 📁 Project Structure
-
-```
-qwen-api/
-├── app/                    # Application code
-│   ├── api/               # API endpoints
-│   ├── providers/         # Provider implementations
-│   ├── models/            # Data models
-│   ├── core/              # Core configuration
-│   └── utils/             # Utilities
-├── docker/                # Docker deployment
-│   ├── Dockerfile         # Container image
-│   ├── docker-compose.yml # Service orchestration
-│   └── deploy.sh          # Deployment script
-├── .env.example          # Environment template
-├── flareprox.py          # FlareProx manager
-├── main.py               # Entry point
-└── README.md             # This file
-```
-
----
-
-## 🛠️ Development
-
-### Local Development
-
-```bash
-# Install in development mode
-pip install -e .
-
-# Run with auto-reload
-python main.py 
-```
-
-### CLI Commands
-
-```bash
-# List available models
-python main.py --list-models
-
-# Health check
-python main.py --check
-
-```
-
----
-
-## 📊 Performance & Scalability
-
-### Without FlareProx
-- Single IP address
-- Provider rate limits apply
-- ~100-1000 requests/hour (provider dependent)
-
-### With FlareProx (3 workers)
-- 3 rotating IP addresses
-- 300,000 requests/day total
-- ~12,500 requests/hour sustained
-- Automatic failover
 
 
 
-## 🤝 Contributing
-
-Contributions are welcome! Please:
-
-1. Fork the repository
-2. Create a feature branch
-3. Add tests for new features
-4. Submit a pull request
-
----
-
-## 📝 License
-
-MIT License - see [LICENSE](LICENSE) file for details
-
----
 
 ## 🔗 Links
-
-- **GitHub**: [Zeeeepa/z.ai2api_python](https://github.com/Zeeeepa/z.ai2api_python)
-- **Issues**: [Report a bug](https://github.com/Zeeeepa/z.ai2api_python/issues)
-- **Cloudflare Workers**: [Get Started](https://workers.cloudflare.com/)
-
----
-
-## ⚠️ Disclaimer
-
-This project is for educational and research purposes. Ensure you comply with provider terms of service and API usage policies.
-
----
-
-<div align="center">
-
-**Made with ❤️ by the Z.AI2API Team**
-
-⭐ Star this repo if you find it useful!
-
-</div>
-
-<div align="center">
-  <img src="https://assets.alicdn.com/g/qwenweb/qwen-webui-fe/0.0.201/favicon.png" alt="Qwen Logo" width="120" height="120">
-  
-  <h1>Qwen API</h1>
-  
-  <p>
-    <strong>OpenAI-compatible API endpoints for Qwen AI</strong>
-  </p>
-  
-  <p>
-    <a href="#-key-features">Features</a> •
-    <a href="#-quick-start">Quick Start</a> •
-    <a href="#️-supported-endpoints">Supported Endpoints</a> •
-    <a href="#-openapi-docs">OpenAPI Docs</a> •
-    <a href="#-usage-examples">Usage Examples</a> •
-    <a href="#-license">License</a>
-  </p>
-  
-  <br/>
-</div>
-
-## 🌟 Overview
-
-Qwen API Proxy acts as a bridge between Qwen AI's proprietary API and the widely-adopted OpenAI API format. This allows developers to seamlessly integrate Qwen's advanced AI capabilities into their applications using familiar OpenAI-compatible endpoints.
-
-> **Note**: This is an unofficial proxy and not affiliated with Alibaba Cloud or Qwen AI.
-
-## 📘 OpenAPI Docs
 
 ### API documentation : https://qwen-api.readme.io/
 
@@ -492,16 +201,9 @@ Qwen API Proxy acts as a bridge between Qwen AI's proprietary API and the widely
 | QWQ-32B                    | ❌        | ✅           | ✅            | ❌              |
 
 ## 🚀 Quick Start
-
 ### Use the Public Instance
-
 The public instance is available at: `https://qwen.aikit.club`
 
-## 💡 Usage Examples
-
-### Authentication
-
-The proxy requires a Bearer token containing Qwen credentials:
 
 ```javascript
 const headers = {
@@ -509,39 +211,6 @@ const headers = {
   "Content-Type": "application/json",
 };
 ```
-
-### Temporary Free Token
-
-For quick testing, you can use this temporary token until it expires.
-
-- Token:
-
-```
-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjI3ZGUyYzVlLTYzZDYtNDU2MC1iNmQ3LTI2MDk0NDhjZmJmNiIsImxhc3RfcGFzc3dvcmRfY2hhbmdlIjoxNzU5ODg4MzE5LCJleHAiOjE3NjA3NDg4MTF9.NXiiJQMCmw4NCjBoyE_gADBOp8XOTGXWAAJgUjCSx7A
-```
-
-- Expires: 2025-10-18 00:53:31 UTC (2025-10-18 06:23:31 IST, UTC+05:30)
-- Note: This token is for evaluation only and will stop working after the expiration time.
-
-### How to Get Your Token
-
-To obtain your Qwen API token, follow these steps:
-
-1. **Visit Qwen Chat**: Go to [chat.qwen.ai](https://chat.qwen.ai) and log in to your account
-2. **Run the Token Extractor**: Copy and paste the following JavaScript code into your browser's developer console (press F12 → Console tab):
-
-```javascript
-javascript:(function(){if(window.location.hostname!=="chat.qwen.ai"){alert("🚀 This code is for chat.qwen.ai");window.open("https://chat.qwen.ai","_blank");return;}
-function getApiKeyData(){const token=localStorage.getItem("token");if(!token){alert("❌ qwen access_token not found !!!");return null;}
-return token;}
-async function copyToClipboard(text){try{await navigator.clipboard.writeText(text);return true;}catch(err){console.error("❌ Failed to copy to clipboard:",err);const textarea=document.createElement("textarea");textarea.value=text;textarea.style.position="fixed";textarea.style.opacity="0";document.body.appendChild(textarea);textarea.focus();textarea.select();const success=document.execCommand("copy");document.body.removeChild(textarea);return success;}}
-const apiKeyData=getApiKeyData();if(!apiKeyData)return;copyToClipboard(apiKeyData).then((success)=>{if(success){alert("🔑 Qwen access_token copied to clipboard !!! 🎉");}else{prompt("🔰 Qwen access_token:",apiKeyData);}});})();
-```
-
-3. **Get Your Token**: The script will automatically:
-
-   - Extract your access_token from localStorage
-   - Copy the access_token to your clipboard
 
 4. **Use the Token**: The copied token is now ready to use as your `Bearer` token in API requests
 
@@ -561,8 +230,6 @@ curl -X POST https://qwen.aikit.club/validate \
   -H "Content-Type: application/json" \
   -d '{"token": "YOUR_QWEN_ACCESS_TOKEN"}'
 ```
-
-Or via GET:
 
 ```bash
 curl "https://qwen.aikit.club/validate?token=YOUR_QWEN_ACCESS_TOKEN"
@@ -968,29 +635,3 @@ const response = await fetch("https://qwen.aikit.club/v1/chat/completions", {
   }),
 });
 ```
-
-## 📚 Documentation
-
-For more detailed documentation:
-
-- **[📖 Complete Documentation](docs/)** - Full documentation index
-- **[🚀 Installation Guide](docs/guides/install.md)** - Detailed setup instructions
-- **[⚡ Quickstart](docs/guides/quickstart.md)** - Get started in 5 minutes
-- **[🔑 Get Bearer Token](docs/guides/get-token.md)** - Token extraction guide
-- **[🧪 Testing](tests/README.md)** - Run tests and validation
-- **[💡 Examples](examples/)** - Code examples and use cases
-
-## 📜 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
-<div align="center">
-  <p>
-    Built with ❤️ by Tarun
-  </p>
-  <p>
-    <sub>If you find this project useful, please consider giving it a ⭐ on GitHub!</sub>
-  </p>
-</div>
