@@ -1,476 +1,464 @@
-# Installation Guide
+# Installation Guide - Qwen API Proxy
 
-Complete guide for installing and running the Qwen API Server.
+Complete step-by-step installation guide for the Qwen API proxy server.
 
-## Table of Contents
+## 📋 Prerequisites
 
-1. [Quick Start](#quick-start)
-2. [Installation Methods](#installation-methods)
-3. [Configuration](#configuration)
-4. [Running the Server](#running-the-server)
-5. [Docker Deployment](#docker-deployment)
-6. [FlareProx Setup](#flareprox-setup)
-7. [Troubleshooting](#troubleshooting)
+### Required
+- **Python 3.8+** (Python 3.10+ recommended)
+- **Linux/macOS/WSL** (Windows users should use WSL2)
+- **Git**
+- **4GB RAM minimum** (8GB+ recommended)
+
+### Optional (for Bearer token extraction)
+- **Playwright system dependencies** (for automated token extraction)
+- Or manually provide `QWEN_BEARER_TOKEN`
 
 ---
 
-## Quick Start
+## 🚀 Quick Install (Recommended)
 
-### Prerequisites
-
-- Python 3.8 or higher
-- pip or uv package manager
-- (Optional) Docker and Docker Compose for containerized deployment
-- (Optional) Cloudflare account for FlareProx integration
-
-### Install from Source
-
+### Option 1: One-Command Installation
 ```bash
-# Clone the repository
+git clone https://github.com/Zeeeepa/qwen-api.git
+cd qwen-api
+bash scripts/all.sh
+```
+
+This will:
+1. ✅ Install all dependencies
+2. ✅ Setup virtual environment
+3. ✅ Install Playwright (with prompts for system deps)
+4. ✅ Extract Bearer token
+5. ✅ Start the server
+6. ✅ Run comprehensive tests
+
+### Option 2: Step-by-Step Installation
+```bash
+# 1. Clone repository
 git clone https://github.com/Zeeeepa/qwen-api.git
 cd qwen-api
 
-# Install in editable mode
-pip install -e .
+# 2. Setup environment
+bash scripts/setup.sh
 
-# Or use uv (recommended for faster installation)
-uv pip install -e .
+# 3. Start server
+bash scripts/start.sh
+
+# 4. Test endpoints
+bash scripts/send_request.sh
 ```
 
 ---
 
-## Installation Methods
+## 🔧 Detailed Installation
 
-### Method 1: pip install -e . (Development)
-
-Best for development and testing:
-
+### Step 1: Clone Repository
 ```bash
-# Install in editable mode with all dependencies
-pip install -e .
-
-# Run the server
-python main.py
-
-# Or use the installed command
-z-ai2api
+git clone https://github.com/Zeeeepa/qwen-api.git
+cd qwen-api
 ```
 
-### Method 2: Docker (Production)
+### Step 2: Configure Credentials
 
-Best for production deployments:
-
-```bash
-# Using docker-compose
-docker-compose up -d
-
-# Or build manually
-docker build -f docker/Dockerfile -t qwen-api .
-docker run -p 8080:8080 qwen-api
-```
-
-### Method 3: Manual Setup
-
-For custom installations:
-
-```bash
-# Install dependencies
-pip install -r requirements.txt
-
-# Run directly
-python main.py
-```
-
----
-
-## Configuration
-
-### Environment Variables
-
-Create a `.env` file from the example:
-
+Create `.env` file:
 ```bash
 cp .env.example .env
 ```
 
-Edit `.env` with your configuration:
-
+Edit `.env` and add your credentials:
 ```bash
-# Basic Configuration
-LISTEN_PORT=8080
-HOST=0.0.0.0
-DEBUG_LOGGING=false
-
-# Provider Credentials (required for authentication)
+# Required for token extraction
 QWEN_EMAIL=your-email@example.com
 QWEN_PASSWORD=your-password
 
-# FlareProx (optional - for IP rotation)
-FLAREPROX_ENABLED=false
-CLOUDFLARE_API_TOKEN=your-cloudflare-token
-CLOUDFLARE_ACCOUNT_ID=your-account-id
+# Or provide token directly (faster)
+QWEN_BEARER_TOKEN=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+# Server configuration
+LISTEN_PORT=8096
+HOST=0.0.0.0
+ANONYMOUS_MODE=true
+DEBUG_LOGGING=true
 ```
 
-### Token Pool Configuration
+### Step 3: Install Dependencies
 
-For unlimited concurrency with multiple API keys:
-
-1. Create a tokens file (e.g., `tokens.txt`):
-
-```
-sk-token1-xxxxx
-sk-token2-yyyyy
-sk-token3-zzzzz
+#### Automatic (Recommended)
+```bash
+bash scripts/setup.sh
 ```
 
-2. Set the environment variable:
+#### Manual
+```bash
+# Install uv package manager
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Create virtual environment
+uv venv
+
+# Activate virtual environment
+source .venv/bin/activate
+
+# Install Python dependencies
+uv pip install -r requirements.txt
+```
+
+### Step 4: Install Playwright (For Token Extraction)
+
+Playwright is needed **ONLY** if you want automatic Bearer token extraction. If you provide `QWEN_BEARER_TOKEN` directly in `.env`, you can skip this step.
+
+#### Option A: Let setup.sh handle it
+```bash
+bash scripts/setup.sh
+# Follow the prompts when Playwright installation is needed
+```
+
+#### Option B: Manual Playwright Installation
+
+**On Ubuntu/Debian:**
+```bash
+# Activate virtual environment
+source .venv/bin/activate
+
+# Install Playwright browsers
+playwright install chromium
+
+# Install system dependencies (requires sudo)
+sudo playwright install-deps chromium
+```
+
+**On macOS:**
+```bash
+# Activate virtual environment
+source .venv/bin/activate
+
+# Install Playwright browsers
+playwright install chromium
+
+# System dependencies are usually already available on macOS
+```
+
+**On other Linux distributions:**
+```bash
+# Activate virtual environment
+source .venv/bin/activate
+
+# Install Playwright browsers
+playwright install chromium
+
+# Install system dependencies manually
+# For Fedora/RHEL/CentOS:
+sudo dnf install -y \
+    nss \
+    atk \
+    cups-libs \
+    libdrm \
+    cairo \
+    pango \
+    alsa-lib
+
+# For Arch Linux:
+sudo pacman -S \
+    nss \
+    atk \
+    cups \
+    libdrm \
+    cairo \
+    pango \
+    alsa-lib
+```
+
+### Step 5: Extract Bearer Token
+
+#### Option A: Automatic (using Playwright)
+```bash
+source .venv/bin/activate
+python3 test_auth.py
+```
+
+The token will be saved to `.env` automatically.
+
+#### Option B: Manual Extraction
+
+1. Go to https://chat.qwen.ai/
+2. Open browser DevTools (F12)
+3. Go to Application/Storage → Local Storage
+4. Find `web_api_token` key
+5. Copy the value
+6. Add to `.env`:
+   ```bash
+   QWEN_BEARER_TOKEN=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+   ```
+
+### Step 6: Start the Server
 
 ```bash
-AUTH_TOKENS_FILE=tokens.txt
+bash scripts/start.sh
 ```
 
-### Configuration Priority
+Or manually:
+```bash
+source .venv/bin/activate
+python3 main.py --port 8096 --host 0.0.0.0
+```
 
-1. CLI arguments (highest priority)
-2. Environment variables
-3. Default values (lowest priority)
+### Step 7: Verify Installation
+
+```bash
+# Check health endpoint
+curl http://localhost:8096/health
+
+# Run comprehensive tests
+bash scripts/send_request.sh
+
+# Test with OpenAI SDK
+python3 examples/openai_client_example.py
+```
 
 ---
 
-## Running the Server
+## 🐛 Troubleshooting
 
-### Basic Usage
+### Issue: "sudo: playwright: command not found"
 
+**Problem:** The setup script is trying to run `sudo playwright` but `playwright` is not in the system PATH.
+
+**Solution 1 (Recommended):** Install Playwright system dependencies manually:
 ```bash
-# Start with default settings (port 8080)
-python main.py
-
-# Specify custom port
-python main.py --port 8081
-
-# Enable debug mode
-python main.py --debug
-
-# Specify host
-python main.py --host 0.0.0.0 --port 8081
-
-# Show all options
-python main.py --help
+source .venv/bin/activate
+sudo .venv/bin/playwright install-deps chromium
 ```
 
-### Using the Installed Command
+**Solution 2:** Skip Playwright and provide token manually:
+1. Get Bearer token manually (see Step 5, Option B)
+2. Add to `.env`: `QWEN_BEARER_TOKEN=your-token-here`
+3. Continue with installation
 
-After `pip install -e .`:
+### Issue: "Playwright browser installation failed"
 
+**Problem:** System dependencies are missing.
+
+**Solution:**
 ```bash
-# Default
-z-ai2api
+# Ubuntu/Debian
+sudo apt-get update
+sudo apt-get install -y \
+    libnss3 \
+    libatk1.0-0 \
+    libatk-bridge2.0-0 \
+    libcups2 \
+    libdrm2 \
+    libxkbcommon0 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxfixes3 \
+    libxrandr2 \
+    libgbm1 \
+    libpango-1.0-0 \
+    libcairo2 \
+    libasound2
 
-# With options
-z-ai2api --port 8081 --debug
+# Then retry
+source .venv/bin/activate
+playwright install chromium
 ```
 
-### Command-Line Options
+### Issue: "Invalid or expired Qwen token"
 
+**Problem:** Bearer token has expired (tokens expire after ~12 hours).
+
+**Solution:**
+```bash
+# Re-extract token
+source .venv/bin/activate
+python3 test_auth.py
+
+# Or run full setup
+bash scripts/setup.sh
 ```
-Options:
-  --version              Show version and exit
-  -p, --port PORT        Server port (default: 8080)
-  -h, --host HOST        Server host (default: 0.0.0.0)
-  -d, --debug            Enable debug logging
-  --no-reload            Disable hot reload (production)
-  --workers N            Number of worker processes
-  --tokens-file PATH     Path to authentication tokens file
-  --flareprox            Enable FlareProx proxy rotation
-  --anonymous            Enable anonymous mode
+
+### Issue: "Port 8096 already in use"
+
+**Problem:** Another service is using port 8096.
+
+**Solution 1:** Kill the existing process:
+```bash
+lsof -ti:8096 | xargs kill -9
+```
+
+**Solution 2:** Use a different port:
+```bash
+# Edit .env
+LISTEN_PORT=8097
+
+# Or start with custom port
+python3 main.py --port 8097
+```
+
+### Issue: "Module not found" errors
+
+**Problem:** Dependencies not installed correctly.
+
+**Solution:**
+```bash
+source .venv/bin/activate
+uv pip install -r requirements.txt --force-reinstall
+```
+
+### Issue: "Permission denied" when running scripts
+
+**Problem:** Scripts don't have execute permissions.
+
+**Solution:**
+```bash
+chmod +x scripts/*.sh
 ```
 
 ---
 
-## Docker Deployment
+## 🎯 Alternative Installation Methods
 
-### Using Docker Compose (Recommended)
-
-1. **Create environment file:**
-
-```bash
-cp .env.example .env
-# Edit .env with your credentials
-```
-
-2. **Start services:**
-
-```bash
-# Start in background
-docker-compose up -d
-
-# View logs
-docker-compose logs -f
-
-# Stop services
-docker-compose down
-```
-
-3. **Test the deployment:**
-
-```bash
-curl http://localhost:8080/health
-```
-
-### Custom Docker Compose
-
-Create `docker-compose.override.yml` for custom configuration:
-
-```yaml
-version: '3.8'
-
-services:
-  qwen2api-router:
-    environment:
-      - DEBUG_LOGGING=true
-      - LISTEN_PORT=8081
-    ports:
-      - "8081:8081"
-```
-
-### Docker Build Options
+### Using Docker (Coming Soon)
 
 ```bash
 # Build image
-docker build -f docker/Dockerfile -t qwen-api:latest .
+docker build -t qwen-api .
 
 # Run with environment variables
-docker run -d \
-  -p 8080:8080 \
-  -e QWEN_EMAIL=your-email \
-  -e QWEN_PASSWORD=your-password \
-  -e DEBUG_LOGGING=true \
-  --name qwen-api \
-  qwen-api:latest
-
-# Run with environment file
-docker run -d \
-  -p 8080:8080 \
-  --env-file .env \
-  --name qwen-api \
-  qwen-api:latest
+docker run -p 8096:8096 \
+    -e QWEN_EMAIL=your@email.com \
+    -e QWEN_PASSWORD=yourpassword \
+    qwen-api
 ```
 
----
+### Using System Python (Not Recommended)
 
-## FlareProx Setup
-
-FlareProx provides IP rotation and load balancing through Cloudflare Workers.
-
-### Prerequisites
-
-1. **Cloudflare Account** with API access
-2. **API Token** with Workers permissions
-3. **Account ID** from Cloudflare dashboard
-
-### Setup Steps
-
-1. **Get Cloudflare credentials:**
-
-   - Login to Cloudflare Dashboard
-   - Get your Account ID from the URL or dashboard
-   - Create API Token with "Edit Cloudflare Workers" permission
-
-2. **Configure environment:**
+If you prefer not to use virtual environments:
 
 ```bash
-# .env file
-FLAREPROX_ENABLED=true
-CLOUDFLARE_API_TOKEN=your-api-token
-CLOUDFLARE_ACCOUNT_ID=your-account-id
-FLAREPROX_PROXY_COUNT=3
-FLAREPROX_AUTO_ROTATE=true
-```
+# Install dependencies globally
+pip install -r requirements.txt
 
-3. **Install FlareProx:**
-
-```bash
-# Download flareprox.py to project root
-# The server will automatically initialize proxies on startup
-```
-
-4. **Verify setup:**
-
-```bash
 # Start server
-python main.py --flareprox
-
-# Check status
-curl http://localhost:8080/stats
+python3 main.py
 ```
 
-### FlareProx Features
-
-- **Automatic IP Rotation:** Rotates through multiple Cloudflare Workers
-- **Load Balancing:** Distributes requests across proxies
-- **Unlimited Concurrency:** No IP-based rate limiting
-- **Health Monitoring:** Automatic failover for unhealthy proxies
+⚠️ **Warning:** This can cause conflicts with system packages. Virtual environment is strongly recommended.
 
 ---
 
-## Troubleshooting
+## 📚 Post-Installation
 
-### Common Issues
-
-#### 1. Port Already in Use
+### Verify Installation
 
 ```bash
-# Error: Port 8080 already in use
+# 1. Check server status
+curl http://localhost:8096/health
 
-# Solution: Use different port
-python main.py --port 8081
-```
+# Expected output:
+# {"status":"ok","service":"qwen-ai2api-server","version":"0.2.0"}
 
-#### 2. Module Not Found
+# 2. List available models
+curl http://localhost:8096/v1/models
 
-```bash
-# Error: ModuleNotFoundError: No module named 'app'
-
-# Solution: Install in editable mode
-pip install -e .
-```
-
-#### 3. FlareProx Not Initializing
-
-```bash
-# Error: FlareProx: Missing credentials
-
-# Solution: Set environment variables
-export CLOUDFLARE_API_TOKEN=your-token
-export CLOUDFLARE_ACCOUNT_ID=your-account-id
-export FLAREPROX_ENABLED=true
-```
-
-#### 4. Token Pool Empty
-
-```bash
-# Error: No available tokens
-
-# Solution: Add tokens to file
-echo "sk-token1" > tokens.txt
-echo "sk-token2" >> tokens.txt
-export AUTH_TOKENS_FILE=tokens.txt
-```
-
-### Debug Mode
-
-Enable detailed logging:
-
-```bash
-# CLI
-python main.py --debug
-
-# Environment variable
-export DEBUG_LOGGING=true
-python main.py
-
-# Check debug info
-curl http://localhost:8080/debug
-```
-
-### Health Checks
-
-```bash
-# Basic health check
-curl http://localhost:8080/health
-
-# Detailed component status
-curl http://localhost:8080/health/detailed
-
-# System metrics
-curl http://localhost:8080/system
-
-# Request statistics
-curl http://localhost:8080/stats
-```
-
-### Logs
-
-```bash
-# View logs (if using docker-compose)
-docker-compose logs -f
-
-# View specific service logs
-docker-compose logs -f qwen2api-router
-
-# Check log files
-tail -f logs/app.log
-```
-
----
-
-## Testing the Installation
-
-### 1. Health Check
-
-```bash
-curl http://localhost:8080/health
-```
-
-Expected response:
-```json
-{
-  "status": "ok",
-  "service": "qwen-ai2api-server",
-  "version": "0.2.0"
-}
-```
-
-### 2. List Models
-
-```bash
-curl http://localhost:8080/v1/models
-```
-
-### 3. Chat Completion
-
-```bash
-curl -X POST http://localhost:8080/v1/chat/completions \
+# 3. Test chat completion
+curl -X POST http://localhost:8096/v1/chat/completions \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer sk-test" \
   -d '{
-    "model": "GLM-4.5",
-    "messages": [
-      {"role": "user", "content": "Hello!"}
-    ]
+    "model": "qwen-turbo",
+    "messages": [{"role": "user", "content": "Hello!"}],
+    "stream": false
   }'
 ```
 
-### 4. Check Statistics
+### Run Comprehensive Tests
 
 ```bash
-curl http://localhost:8080/stats
+# Run all tests
+bash scripts/send_request.sh
+
+# Expected output:
+# ✓ Test #1: Math Explanation - Passed
+# ✓ Test #2: Code Generation - Passed
+# ✓ Test #3: Fast Response - Passed
+# ✓ Test #4: Technical Deep Dive - Passed
+# ✓ Test #5: Research Mode - Passed
+#
+# Test Summary: 5/5 passed (100%)
 ```
 
+### Configure for Production
+
+1. **Disable Debug Mode**
+   ```bash
+   # In .env
+   DEBUG_LOGGING=false
+   ```
+
+2. **Enable Authentication**
+   ```bash
+   # In .env
+   ANONYMOUS_MODE=false
+   AUTH_TOKENS_FILE=auth_tokens.txt
+   ```
+   
+   Create `auth_tokens.txt`:
+   ```
+   sk-your-secret-key-1
+   sk-your-secret-key-2
+   ```
+
+3. **Setup Systemd Service** (Linux)
+   ```bash
+   sudo nano /etc/systemd/system/qwen-api.service
+   ```
+   
+   Add:
+   ```ini
+   [Unit]
+   Description=Qwen API Proxy Server
+   After=network.target
+
+   [Service]
+   Type=simple
+   User=your-username
+   WorkingDirectory=/path/to/qwen-api
+   ExecStart=/path/to/qwen-api/.venv/bin/python3 main.py
+   Restart=always
+
+   [Install]
+   WantedBy=multi-user.target
+   ```
+   
+   Enable and start:
+   ```bash
+   sudo systemctl enable qwen-api
+   sudo systemctl start qwen-api
+   sudo systemctl status qwen-api
+   ```
+
 ---
 
-## Next Steps
+## 🔗 Next Steps
 
-After successful installation:
-
-1. **Read the [API Documentation](docs/API.md)** for endpoint details
-2. **Configure token rotation** for high availability
-3. **Set up FlareProx** for unlimited concurrency
-4. **Enable monitoring** with `/metrics` endpoint
-5. **Review security settings** for production deployment
+- Read [QUICKSTART.md](QUICKSTART.md) for usage examples
+- Check [scripts/README.md](scripts/README.md) for script documentation
+- See [examples/](examples/) for code samples
+- Review [GET_TOKEN.md](GET_TOKEN.md) for token extraction details
 
 ---
 
-## Support
+## 💬 Getting Help
 
-For issues and questions:
-
-- **GitHub Issues:** https://github.com/Zeeeepa/qwen-api/issues
-- **Documentation:** README.md and docs/
-- **Examples:** See `examples/` directory
+- **Issues:** https://github.com/Zeeeepa/qwen-api/issues
+- **Discussions:** https://github.com/Zeeeepa/qwen-api/discussions
+- **Documentation:** Check the `docs/` folder
 
 ---
 
-## License
+## 📝 License
 
-MIT License - see LICENSE file for details
+Same as parent project.
 

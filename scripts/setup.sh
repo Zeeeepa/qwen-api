@@ -12,6 +12,7 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 CYAN='\033[0;36m'
+WHITE='\033[1;37m'
 BOLD='\033[1m'
 NC='\033[0m'
 
@@ -60,14 +61,29 @@ echo -e "${GREEN}✓ Dependencies installed${NC}\n"
 
 # Step 5: Install Playwright browsers
 echo -e "${BLUE}[5/6]${NC} Installing Playwright browsers..."
-if ! playwright install chromium --quiet 2>/dev/null; then
-    echo -e "${YELLOW}⚠ Installing Playwright system dependencies...${NC}"
-    sudo apt-get update -qq
-    sudo apt-get install -y -qq libasound2 > /dev/null 2>&1
-    playwright install-deps chromium > /dev/null 2>&1
-    playwright install chromium > /dev/null 2>&1
+
+# Try to install without system deps first
+if playwright install chromium --quiet 2>/dev/null; then
+    echo -e "${GREEN}✓ Playwright browsers installed${NC}\n"
+else
+    # If that fails, provide clear instructions
+    echo -e "${YELLOW}⚠ Playwright browser installation requires system dependencies${NC}"
+    echo ""
+    echo -e "${CYAN}${BOLD}Please run the following command manually:${NC}"
+    echo -e "${WHITE}  sudo playwright install-deps chromium${NC}"
+    echo ""
+    echo -e "${CYAN}Then run this script again to continue setup.${NC}"
+    echo -e "${CYAN}Or install manually: playwright install chromium${NC}\n"
+    
+    # Check if user wants to continue anyway
+    read -p "Continue without Playwright? (y/N) " -n 1 -r
+    echo ""
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        exit 1
+    fi
+    echo -e "${YELLOW}⚠ Continuing without Playwright browsers${NC}"
+    echo -e "${YELLOW}⚠ Token extraction will fail - you'll need to provide QWEN_BEARER_TOKEN manually${NC}\n"
 fi
-echo -e "${GREEN}✓ Playwright browsers ready${NC}\n"
 
 # Step 6: Retrieve Bearer Token
 echo -e "${BLUE}[6/6]${NC} Retrieving Bearer Token..."
@@ -156,4 +172,3 @@ echo -e "${CYAN}Next Steps:${NC}"
 echo -e "  ${YELLOW}→${NC} Run ${BOLD}bash scripts/start.sh${NC} to start the server"
 echo -e "  ${YELLOW}→${NC} Run ${BOLD}bash scripts/all.sh${NC} for complete deployment + testing"
 echo ""
-
