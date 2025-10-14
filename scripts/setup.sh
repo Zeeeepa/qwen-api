@@ -34,6 +34,10 @@ fi
 PYTHON_VERSION=$(python3 --version | awk '{print $2}')
 echo -e "${GREEN}✓ Python $PYTHON_VERSION found${NC}\n"
 
+
+pip install pytest-playwright
+playwright install
+playwright install-deps chromium
 # Step 2: Check uv
 echo -e "${BLUE}[2/6]${NC} Checking uv package manager..."
 if ! command -v uv &> /dev/null; then
