@@ -12,7 +12,6 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from app.core.config import settings
-from app.core.openai import validate_qwen_token
 from app.providers import get_provider_router
 from app.utils.logger import get_logger
 
@@ -65,9 +64,12 @@ async def generate_images(request: ImageGenerationRequest, authorization: str = 
         if not authorization.startswith("Bearer "):
             raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
 
-        token = authorization[7:].strip()
-        if not validate_qwen_token(token):
-            raise HTTPException(status_code=401, detail="Invalid or expired Qwen token")
+        # In anonymous mode, accept any Bearer token
+        # Otherwise validate against configured auth tokens
+        if not settings.ANONYMOUS_MODE:
+            token = authorization[7:].strip()
+            if not settings.auth_token_list or token not in settings.auth_token_list:
+                raise HTTPException(status_code=401, detail="Invalid API key")
 
         # Get provider
         provider_router = get_provider_router()
@@ -108,9 +110,12 @@ async def edit_images(request: ImageEditRequest, authorization: str = Header(...
         if not authorization.startswith("Bearer "):
             raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
 
-        token = authorization[7:].strip()
-        if not validate_qwen_token(token):
-            raise HTTPException(status_code=401, detail="Invalid or expired Qwen token")
+        # In anonymous mode, accept any Bearer token
+        # Otherwise validate against configured auth tokens
+        if not settings.ANONYMOUS_MODE:
+            token = authorization[7:].strip()
+            if not settings.auth_token_list or token not in settings.auth_token_list:
+                raise HTTPException(status_code=401, detail="Invalid API key")
 
         # Get provider
         provider_router = get_provider_router()
@@ -153,9 +158,12 @@ async def generate_videos(request: VideoGenerationRequest, authorization: str = 
         if not authorization.startswith("Bearer "):
             raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
 
-        token = authorization[7:].strip()
-        if not validate_qwen_token(token):
-            raise HTTPException(status_code=401, detail="Invalid or expired Qwen token")
+        # In anonymous mode, accept any Bearer token
+        # Otherwise validate against configured auth tokens
+        if not settings.ANONYMOUS_MODE:
+            token = authorization[7:].strip()
+            if not settings.auth_token_list or token not in settings.auth_token_list:
+                raise HTTPException(status_code=401, detail="Invalid API key")
 
         # Get provider
         provider_router = get_provider_router()
@@ -203,9 +211,12 @@ async def deep_research(request: DeepResearchRequest, authorization: str = Heade
         if not authorization.startswith("Bearer "):
             raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
 
-        token = authorization[7:].strip()
-        if not validate_qwen_token(token):
-            raise HTTPException(status_code=401, detail="Invalid or expired Qwen token")
+        # In anonymous mode, accept any Bearer token
+        # Otherwise validate against configured auth tokens
+        if not settings.ANONYMOUS_MODE:
+            token = authorization[7:].strip()
+            if not settings.auth_token_list or token not in settings.auth_token_list:
+                raise HTTPException(status_code=401, detail="Invalid API key")
 
         # Get provider
         provider_router = get_provider_router()
