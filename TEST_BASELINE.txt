@@ -1,4 +1,0 @@
-/usr/local/bin/python3: No module named pytest
-=== TEST BASELINE (without pytest) ===
-Tests exist in tests/ but pytest not installed in system Python
-Will run tests after venv is activated
