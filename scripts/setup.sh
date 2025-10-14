@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 ################################################################################
-# setup.sh - Full Setup (Without Starting Server)
-# Sets up Python environment, installs dependencies, and configures the system
+# setup.sh - Environment Setup and Bearer Token Retrieval
+# This script sets up the Python environment and extracts the Bearer token
 ################################################################################
 
 set -e
@@ -15,116 +15,145 @@ CYAN='\033[0;36m'
 BOLD='\033[1m'
 NC='\033[0m'
 
-echo -e "${CYAN}${BOLD}╔════════════════════════════════════════════════════╗${NC}"
-echo -e "${CYAN}${BOLD}║       Qwen API - Setup Script                     ║${NC}"
-echo -e "${CYAN}${BOLD}╚════════════════════════════════════════════════════╝${NC}\n"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
-# Check Python 3.8+
-echo -e "${BLUE}🔍 Checking Python version...${NC}"
-if ! command -v python3 &>/dev/null; then
-    echo -e "${RED}❌ Python 3 not found. Please install Python 3.8 or higher.${NC}"
+cd "$PROJECT_ROOT"
+
+echo -e "${CYAN}${BOLD}═══════════════════════════════════════════════════════${NC}"
+echo -e "${CYAN}${BOLD}    Qwen API - Environment Setup & Token Retrieval     ${NC}"
+echo -e "${CYAN}${BOLD}═══════════════════════════════════════════════════════${NC}\n"
+
+# Step 1: Check Python
+echo -e "${BLUE}[1/6]${NC} Checking Python installation..."
+if ! command -v python3 &> /dev/null; then
+    echo -e "${RED}✗ Python 3 not found!${NC}"
     exit 1
 fi
+PYTHON_VERSION=$(python3 --version | awk '{print $2}')
+echo -e "${GREEN}✓ Python $PYTHON_VERSION found${NC}\n"
 
-PYTHON_VERSION=$(python3 -c 'import sys; print(".".join(map(str, sys.version_info[:2])))')
-MAJOR_VERSION=$(echo "$PYTHON_VERSION" | cut -d. -f1)
-MINOR_VERSION=$(echo "$PYTHON_VERSION" | cut -d. -f2)
-
-if [ "$MAJOR_VERSION" -lt 3 ] || ([ "$MAJOR_VERSION" -eq 3 ] && [ "$MINOR_VERSION" -lt 8 ]); then
-    echo -e "${RED}❌ Python $PYTHON_VERSION detected. Python 3.8+ required.${NC}"
-    exit 1
+# Step 2: Check uv
+echo -e "${BLUE}[2/6]${NC} Checking uv package manager..."
+if ! command -v uv &> /dev/null; then
+    echo -e "${YELLOW}⚠ uv not found, installing...${NC}"
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    export PATH="$HOME/.cargo/bin:$PATH"
 fi
+echo -e "${GREEN}✓ uv package manager ready${NC}\n"
 
-echo -e "${GREEN}✅ Python $PYTHON_VERSION detected${NC}\n"
-
-# Create virtual environment
-echo -e "${BLUE}🔧 Creating Python virtual environment...${NC}"
-if [ ! -d "venv" ]; then
-    python3 -m venv venv
-    echo -e "${GREEN}✅ Virtual environment created${NC}\n"
+# Step 3: Create virtual environment
+echo -e "${BLUE}[3/6]${NC} Setting up virtual environment..."
+if [ ! -d ".venv" ]; then
+    uv venv
+    echo -e "${GREEN}✓ Virtual environment created${NC}"
 else
-    echo -e "${YELLOW}⚠️  Virtual environment already exists${NC}\n"
+    echo -e "${GREEN}✓ Virtual environment already exists${NC}"
 fi
+echo ""
 
-# Activate virtual environment
-echo -e "${BLUE}🔌 Activating virtual environment...${NC}"
-source venv/bin/activate
-echo -e "${GREEN}✅ Virtual environment activated${NC}\n"
+# Step 4: Install dependencies
+echo -e "${BLUE}[4/6]${NC} Installing dependencies..."
+source .venv/bin/activate
+uv pip install -r requirements.txt --quiet
+echo -e "${GREEN}✓ Dependencies installed${NC}\n"
 
-# Upgrade pip
-echo -e "${BLUE}📦 Upgrading pip...${NC}"
-pip install --upgrade pip --quiet
-echo -e "${GREEN}✅ pip upgraded${NC}\n"
-
-# Install dependencies
-echo -e "${BLUE}📦 Installing Python dependencies...${NC}"
-if [ -f "requirements.txt" ]; then
-    pip install -r requirements.txt --quiet
-    echo -e "${GREEN}✅ Dependencies installed${NC}\n"
-else
-    echo -e "${YELLOW}⚠️  requirements.txt not found${NC}\n"
+# Step 5: Install Playwright browsers
+echo -e "${BLUE}[5/6]${NC} Installing Playwright browsers..."
+if ! playwright install chromium --quiet 2>/dev/null; then
+    echo -e "${YELLOW}⚠ Installing Playwright system dependencies...${NC}"
+    sudo apt-get update -qq
+    sudo apt-get install -y -qq libasound2 > /dev/null 2>&1
+    playwright install-deps chromium > /dev/null 2>&1
+    playwright install chromium > /dev/null 2>&1
 fi
+echo -e "${GREEN}✓ Playwright browsers ready${NC}\n"
 
-# Install Playwright browsers
-echo -e "${BLUE}🌐 Installing Playwright browsers...${NC}"
-playwright install chromium --with-deps
-echo -e "${GREEN}✅ Playwright browsers installed${NC}\n"
+# Step 6: Retrieve Bearer Token
+echo -e "${BLUE}[6/6]${NC} Retrieving Bearer Token..."
 
-# Setup environment file
-echo -e "${BLUE}⚙️  Setting up environment configuration...${NC}"
+# Check if .env exists
 if [ ! -f ".env" ]; then
-    cat > .env << EOF
-# Qwen API Configuration
+    echo -e "${YELLOW}⚠ .env file not found, creating from .env.example...${NC}"
+    if [ -f ".env.example" ]; then
+        cp .env.example .env
+    else
+        cat > .env << 'EOF'
+QWEN_EMAIL=your-email@example.com
+QWEN_PASSWORD=your-password
 LISTEN_PORT=8096
+ANONYMOUS_MODE=true
 DEBUG_LOGGING=true
-
-# Qwen Credentials (will be set by user)
-QWEN_EMAIL=${QWEN_EMAIL:-}
-QWEN_PASSWORD=${QWEN_PASSWORD:-}
-
-# Optional: Bearer Token (if you already have one)
-# QWEN_BEARER_TOKEN=
 EOF
-    echo -e "${GREEN}✅ .env file created${NC}\n"
+    fi
+    echo -e "${YELLOW}⚠ Please edit .env and add your QWEN_EMAIL and QWEN_PASSWORD${NC}"
+    echo -e "${YELLOW}⚠ Then run this script again${NC}\n"
+    exit 1
+fi
+
+# Load environment variables
+set -a
+source .env
+set +a
+
+# Check if we already have a Bearer token
+if [ -n "$QWEN_BEARER_TOKEN" ]; then
+    echo -e "${GREEN}✓ Bearer token found in .env (${#QWEN_BEARER_TOKEN} chars)${NC}"
+    echo -e "${CYAN}Token preview: ${QWEN_BEARER_TOKEN:0:30}...${QWEN_BEARER_TOKEN: -30}${NC}\n"
 else
-    echo -e "${YELLOW}⚠️  .env file already exists${NC}\n"
-fi
-
-# Prompt for credentials if not set
-if [ -z "$QWEN_EMAIL" ] || [ -z "$QWEN_PASSWORD" ]; then
-    echo -e "${YELLOW}📝 Qwen credentials not found in environment${NC}"
-    echo -e "${BLUE}Please enter your Qwen credentials:${NC}"
-    
-    if [ -z "$QWEN_EMAIL" ]; then
-        read -p "$(echo -e ${CYAN}Email: ${NC})" QWEN_EMAIL
-        echo "QWEN_EMAIL=$QWEN_EMAIL" >> .env
+    # Check credentials
+    if [ -z "$QWEN_EMAIL" ] || [ -z "$QWEN_PASSWORD" ]; then
+        echo -e "${RED}✗ QWEN_EMAIL or QWEN_PASSWORD not set in .env${NC}"
+        echo -e "${YELLOW}Please edit .env and add your credentials${NC}\n"
+        exit 1
     fi
+
+    echo -e "${CYAN}Extracting Bearer token using Playwright...${NC}"
     
-    if [ -z "$QWEN_PASSWORD" ]; then
-        read -sp "$(echo -e ${CYAN}Password: ${NC})" QWEN_PASSWORD
-        echo
-        echo "QWEN_PASSWORD=$QWEN_PASSWORD" >> .env
+    # Run token extraction
+    if python3 test_auth.py > /tmp/token_extraction.log 2>&1; then
+        # Extract token from output
+        TOKEN=$(grep "QWEN_BEARER_TOKEN=" /tmp/token_extraction.log | cut -d'=' -f2)
+        
+        if [ -n "$TOKEN" ]; then
+            # Add token to .env if not already there
+            if ! grep -q "QWEN_BEARER_TOKEN=" .env; then
+                echo "" >> .env
+                echo "QWEN_BEARER_TOKEN=$TOKEN" >> .env
+            else
+                # Update existing token
+                sed -i.bak "s|QWEN_BEARER_TOKEN=.*|QWEN_BEARER_TOKEN=$TOKEN|" .env
+            fi
+            
+            echo -e "${GREEN}✓ Bearer token extracted and saved to .env${NC}"
+            echo -e "${CYAN}Token preview: ${TOKEN:0:30}...${TOKEN: -30}${NC}"
+            echo -e "${CYAN}Token length: ${#TOKEN} characters${NC}\n"
+        else
+            echo -e "${RED}✗ Failed to extract token${NC}"
+            cat /tmp/token_extraction.log
+            exit 1
+        fi
+    else
+        echo -e "${RED}✗ Token extraction failed${NC}"
+        cat /tmp/token_extraction.log
+        exit 1
     fi
-    
-    echo -e "${GREEN}✅ Credentials saved to .env${NC}\n"
 fi
 
-# Add anonymous mode setting (always add if not present)
-if ! grep -q "ANONYMOUS_MODE" .env 2>/dev/null; then
-    echo "ANONYMOUS_MODE=true" >> .env
-    echo -e "${GREEN}✅ Anonymous mode enabled${NC}\n"
-fi
+echo -e "${GREEN}${BOLD}═══════════════════════════════════════════════════════${NC}"
+echo -e "${GREEN}${BOLD}            Setup Complete! ✓                          ${NC}"
+echo -e "${GREEN}${BOLD}═══════════════════════════════════════════════════════${NC}\n"
 
-# Create necessary directories
-echo -e "${BLUE}📁 Creating necessary directories...${NC}"
-mkdir -p .sessions logs
-echo -e "${GREEN}✅ Directories created${NC}\n"
+echo -e "${CYAN}Environment Status:${NC}"
+echo -e "  ${BLUE}Python:${NC} $PYTHON_VERSION"
+echo -e "  ${BLUE}Virtual Env:${NC} .venv"
+echo -e "  ${BLUE}Dependencies:${NC} Installed"
+echo -e "  ${BLUE}Playwright:${NC} Ready"
+echo -e "  ${BLUE}Bearer Token:${NC} ${GREEN}✓${NC} Configured"
+echo ""
 
-echo -e "${GREEN}${BOLD}╔════════════════════════════════════════════════════╗${NC}"
-echo -e "${GREEN}${BOLD}║       ✅ Setup Complete!                          ║${NC}"
-echo -e "${GREEN}${BOLD}╚════════════════════════════════════════════════════╝${NC}\n"
+echo -e "${CYAN}Next Steps:${NC}"
+echo -e "  ${YELLOW}→${NC} Run ${BOLD}bash scripts/start.sh${NC} to start the server"
+echo -e "  ${YELLOW}→${NC} Run ${BOLD}bash scripts/all.sh${NC} for complete deployment + testing"
+echo ""
 
-echo -e "${CYAN}Next steps:${NC}"
-echo -e "  ${BLUE}1.${NC} Start the server: ${YELLOW}bash scripts/start.sh${NC}"
-echo -e "  ${BLUE}2.${NC} Test the API: ${YELLOW}bash scripts/send_request.sh${NC}"
-echo -e "  ${BLUE}3.${NC} Or run everything: ${YELLOW}bash scripts/all.sh${NC}\n"
