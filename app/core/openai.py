@@ -102,7 +102,7 @@ async def handle_non_stream_response(stream_response, request: OpenAIRequest) ->
 
     # 收集所有流式数据
     full_content = []
-    async for chunk_data in stream_response():
+    async for chunk_data in stream_response:
         if chunk_data.startswith("data: "):
             chunk_str = chunk_data[6:].strip()
             if chunk_str and chunk_str != "[DONE]":
