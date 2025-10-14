@@ -117,6 +117,8 @@ bash scripts/setup.sh
 #### Option B: Manual Playwright Installation
 
 **On Ubuntu/Debian:**
+
+**Ubuntu 24.04+ (Noble and newer):**
 ```bash
 # Activate virtual environment
 source .venv/bin/activate
@@ -124,8 +126,53 @@ source .venv/bin/activate
 # Install Playwright browsers
 playwright install chromium
 
-# Install system dependencies (requires sudo)
+# Install system dependencies manually (t64 variants for Ubuntu 24.04+)
+sudo apt-get update
+sudo apt-get install -y \
+    libnss3 \
+    libatk1.0-0t64 \
+    libatk-bridge2.0-0t64 \
+    libcups2t64 \
+    libdrm2 \
+    libxkbcommon0 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxfixes3 \
+    libxrandr2 \
+    libgbm1 \
+    libpango-1.0-0 \
+    libcairo2 \
+    libasound2t64 \
+    libatspi2.0-0t64 \
+    libglib2.0-0t64
+```
+
+**Ubuntu 22.04 and older (Jammy and earlier):**
+```bash
+# Activate virtual environment
+source .venv/bin/activate
+
+# Install Playwright browsers
+playwright install chromium
+
+# Install system dependencies (standard packages)
 sudo playwright install-deps chromium
+# Or manually:
+sudo apt-get install -y \
+    libnss3 \
+    libatk1.0-0 \
+    libatk-bridge2.0-0 \
+    libcups2 \
+    libdrm2 \
+    libxkbcommon0 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxfixes3 \
+    libxrandr2 \
+    libgbm1 \
+    libpango-1.0-0 \
+    libcairo2 \
+    libasound2
 ```
 
 **On macOS:**
@@ -220,6 +267,19 @@ python3 examples/openai_client_example.py
 
 ## 🐛 Troubleshooting
 
+### Check Your Ubuntu Version First
+
+If you're on Ubuntu, check which version you're running:
+```bash
+lsb_release -a
+# Or
+cat /etc/os-release
+```
+
+**Important:** Ubuntu 24.04+ (Noble) uses `t64` package variants. If you see "Noble" or version 24.04+, use the Ubuntu 24.04+ instructions below.
+
+---
+
 ### Issue: "sudo: playwright: command not found"
 
 **Problem:** The setup script is trying to run `sudo playwright` but `playwright` is not in the system PATH.
@@ -239,9 +299,36 @@ sudo .venv/bin/playwright install-deps chromium
 
 **Problem:** System dependencies are missing.
 
-**Solution:**
+**Solution for Ubuntu 24.04+ (Noble):**
 ```bash
-# Ubuntu/Debian
+# Ubuntu 24.04 uses t64 package variants
+sudo apt-get update
+sudo apt-get install -y \
+    libnss3 \
+    libatk1.0-0t64 \
+    libatk-bridge2.0-0t64 \
+    libcups2t64 \
+    libdrm2 \
+    libxkbcommon0 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxfixes3 \
+    libxrandr2 \
+    libgbm1 \
+    libpango-1.0-0 \
+    libcairo2 \
+    libasound2t64 \
+    libatspi2.0-0t64 \
+    libglib2.0-0t64
+
+# Then retry
+source .venv/bin/activate
+playwright install chromium
+```
+
+**Solution for Ubuntu 22.04 and older:**
+```bash
+# Ubuntu 22.04 and earlier use standard package names
 sudo apt-get update
 sudo apt-get install -y \
     libnss3 \
@@ -461,4 +548,3 @@ bash scripts/send_request.sh
 ## 📝 License
 
 Same as parent project.
-
