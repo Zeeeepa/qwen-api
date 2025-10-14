@@ -156,18 +156,31 @@ kill_port() {
     
     if check_port "$port"; then
         log_warning "Port $port is already in use"
-        local old_pid
-        old_pid=$(lsof -ti:"$port")
-        log_warning "Killing process $old_pid..."
-        kill -9 "$old_pid" 2>/dev/null || true
-        sleep 2
         
-        # Verify port is free
-        if check_port "$port"; then
-            log_error "Failed to free port $port"
-            exit 1
+        # Get all PIDs using the port (may be multiple)
+        local pids
+        pids=$(lsof -ti:"$port" 2>/dev/null || true)
+        
+        if [[ -n "$pids" ]]; then
+            log_warning "Killing process(es): $pids"
+            
+            # Kill each PID
+            echo "$pids" | while read -r pid; do
+                if [[ -n "$pid" ]]; then
+                    kill -9 "$pid" 2>/dev/null || true
+                fi
+            done
+            
+            sleep 3
+            
+            # Verify port is free
+            if check_port "$port"; then
+                log_error "Failed to free port $port after killing all processes"
+                log_warning "Manual intervention required: sudo lsof -ti:$port | xargs kill -9"
+                exit 1
+            fi
+            log_success "Port $port freed successfully"
         fi
-        log_success "Port $port freed"
     fi
 }
 
