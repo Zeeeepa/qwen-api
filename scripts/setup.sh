@@ -394,13 +394,18 @@ save_bearer_token() {
     log_info "Saving bearer token to .env..."
     
     # Create backup
-    cp .env .env.backup.$(date +%Y%m%d_%H%M%S)
+    cp .env .env.backup.$(date +%Y%m%d_%H%M%S) 2>/dev/null || true
     
-    # Update or add token
-    if grep -q "QWEN_BEARER_TOKEN=" .env; then
-        sed -i.tmp "s|QWEN_BEARER_TOKEN=.*|QWEN_BEARER_TOKEN=$token|" .env
+    # First, uncomment any existing commented token lines
+    sed -i 's/^# *QWEN_BEARER_TOKEN=/QWEN_BEARER_TOKEN=/' .env 2>/dev/null || true
+    
+    # Update or add token (match only active lines, not comments)
+    if grep -q "^QWEN_BEARER_TOKEN=" .env 2>/dev/null; then
+        # Update existing active token
+        sed -i.tmp "s|^QWEN_BEARER_TOKEN=.*|QWEN_BEARER_TOKEN=$token|" .env
         rm -f .env.tmp
     else
+        # Add new token (append to file)
         echo "QWEN_BEARER_TOKEN=$token" >> .env
     fi
     
