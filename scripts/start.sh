@@ -199,8 +199,8 @@ activate_environment() {
     
     source .venv/bin/activate
     
-    # Verify Python environment
-    if ! python3 -c "import fastapi, uvicorn, dotenv" 2>/dev/null; then
+    # Verify Python environment (check for core packages)
+    if ! python3 -c "import fastapi, httpx, pydantic" 2>/dev/null; then
         log_error "Required Python packages not found!"
         echo -e "${YELLOW}Run 'bash scripts/setup.sh' to install dependencies${NC}"
         exit 1
