@@ -111,8 +111,6 @@ check_credentials() {
 find_python() {
     log_step "2/8" "Finding compatible Python version (>= 3.10)..."
     
-    local python_cmd=""
-    
     # List of Python commands to try
     local python_variants=(
         "python3.13"
@@ -134,9 +132,9 @@ find_python() {
             # Check if version meets minimum requirements
             if [ "$major" -gt "$MIN_PYTHON_MAJOR" ] || \
                ([ "$major" -eq "$MIN_PYTHON_MAJOR" ] && [ "$minor" -ge "$MIN_PYTHON_MINOR" ]); then
-                python_cmd="$cmd"
                 log_success "Using $cmd (Python $version)"
-                echo "$python_cmd"
+                # Store in global variable instead of echoing
+                PYTHON_CMD="$cmd"
                 return 0
             else
                 log_warning "$cmd is too old (Python $version < 3.10)"
@@ -210,9 +208,7 @@ install_system_deps() {
 setup_python_env() {
     log_step "4/8" "Setting up Python virtual environment..."
     
-    # Find compatible Python
-    PYTHON_CMD=$(find_python)
-    
+    # Python command already set by find_python() in main flow
     if [ -z "$PYTHON_CMD" ]; then
         log_error "Failed to find compatible Python version"
         exit 1
@@ -637,4 +633,3 @@ main() {
 
 # Run main
 main "$@"
-
