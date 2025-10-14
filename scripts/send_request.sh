@@ -13,6 +13,7 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 MAGENTA='\033[0;35m'
+WHITE='\033[1;37m'
 BOLD='\033[1m'
 NC='\033[0m'
 
@@ -101,8 +102,16 @@ EOF
         PASSED_TESTS=$((PASSED_TESTS + 1))
         echo -e "${GREEN}✓ Test Passed!${NC}\n"
         
-        echo -e "${BLUE}Response:${NC}"
-        echo "$RESPONSE" | jq -C '.choices[0].message.content' 2>/dev/null || echo "$RESPONSE"
+        # Extract and print the actual content (remove quotes)
+        CONTENT=$(echo "$RESPONSE" | jq -r '.choices[0].message.content' 2>/dev/null)
+        
+        echo -e "${GREEN}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+        echo -e "${CYAN}${BOLD}📝 ACTUAL RESPONSE:${NC}"
+        echo -e "${GREEN}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+        echo ""
+        echo -e "${WHITE}$CONTENT${NC}"
+        echo ""
+        echo -e "${GREEN}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
         echo ""
         
         # Show metadata
@@ -129,54 +138,35 @@ EOF
 # Test Suite
 echo -e "${MAGENTA}${BOLD}Starting Test Suite...${NC}\n"
 
-# Test 1: Basic qwen-max-latest
+# Test 1: Linear Algebra Explanation
 run_test \
-    "Basic Chat - qwen-max-latest" \
+    "Math Explanation - qwen-max-latest" \
     "qwen-max-latest" \
-    "What is Python? Give a brief answer."
+    "What is linear algebra? Explain it clearly and give 2 real-world applications."
 
-# Test 2: qwen-turbo (fast model)
-run_test \
-    "Fast Response - qwen-turbo" \
-    "qwen-turbo" \
-    "Tell me a fun fact about computers in one sentence."
-
-# Test 3: qwen-plus (balanced model)
-run_test \
-    "Balanced Model - qwen-plus" \
-    "qwen-plus" \
-    "Explain quantum computing in simple terms."
-
-# Test 4: qwen-deep-research (research mode)
-run_test \
-    "Research Mode - qwen-deep-research" \
-    "qwen-deep-research" \
-    "What are the main programming paradigms?"
-
-# Test 5: qwen3-coder-plus (code generation)
+# Test 2: Code Generation
 run_test \
     "Code Generation - qwen3-coder-plus" \
     "qwen3-coder-plus" \
-    "Write a Python function to calculate factorial."
+    "Write a Python function to find the factorial of a number using recursion. Include comments."
 
-# Test 6: qwen-max with thinking mode
+# Test 3: Fast Response
 run_test \
-    "Thinking Mode - qwen-max" \
-    "qwen-max" \
-    "Solve this math problem: If I have 5 apples and give away 2, how many do I have left?" \
-    ', "enable_thinking": true, "thinking_budget": 2000'
+    "Fast Response - qwen-turbo" \
+    "qwen-turbo" \
+    "Explain what APIs are in 2 sentences."
 
-# Test 7: Long conversation
+# Test 4: Technical Explanation
 run_test \
-    "Multi-turn Context - qwen-plus" \
+    "Technical Deep Dive - qwen-plus" \
     "qwen-plus" \
-    "Write a haiku about coding."
+    "What is the difference between machine learning and deep learning?"
 
-# Test 8: Creative writing
+# Test 5: Research Mode
 run_test \
-    "Creative Writing - qwen-max-latest" \
-    "qwen-max-latest" \
-    "Write a short story opening (2 sentences) about a robot learning to paint."
+    "Research Mode - qwen-deep-research" \
+    "qwen-deep-research" \
+    "What are the key principles of REST API design?"
 
 # Summary
 echo -e "${MAGENTA}${BOLD}"
@@ -216,4 +206,3 @@ if [ $FAILED_TESTS -eq 0 ]; then
 else
     exit 1
 fi
-
