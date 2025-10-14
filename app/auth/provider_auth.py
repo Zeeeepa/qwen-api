@@ -265,8 +265,10 @@ class QwenAuth(ProviderAuth):
                 
                 for attempt in range(10):
                     web_api_token = await page.evaluate('''() => {
-                        // Try the actual token name used by Qwen
-                        return localStorage.getItem('token') 
+                        // Qwen stores token under 'web_api_token' key (verified 2025-10-14)
+                        // Check correct key first, then fallbacks
+                        return localStorage.getItem('web_api_token')
+                            || localStorage.getItem('token') 
                             || localStorage.getItem('web_api_auth_token')
                             || localStorage.getItem('access_token')
                             || localStorage.getItem('auth_token');
@@ -300,7 +302,7 @@ class QwenAuth(ProviderAuth):
                     logger.debug(f"🔑 Token format: {bearer_token[:20]}...{bearer_token[-20:]}")
                 else:
                     logger.warning("⚠️ Qwen: Missing Bearer token")
-                    logger.error("❌ Qwen: 'token' not found in localStorage (checked: token, web_api_auth_token, access_token, auth_token)")
+                    logger.error("❌ Qwen: Token not found in localStorage (checked: web_api_token, token, web_api_auth_token, access_token, auth_token)")
 
                 await browser.close()
 
