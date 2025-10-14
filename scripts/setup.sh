@@ -3,6 +3,7 @@
 # setup.sh - Environment Setup and Bearer Token Retrieval
 # This script sets up the Python environment and extracts the Bearer token
 # Updated to handle Ubuntu 24.04 (Noble) t64 library transitions
+# Enhanced token extraction with multiple methods
 ################################################################################
 
 set -e
@@ -62,7 +63,7 @@ echo -e "${GREEN}✓ Dependencies installed${NC}\n"
 
 # Step 5: Install pytest-playwright
 echo -e "${BLUE}[5/7]${NC} Installing Playwright Python package..."
-pip install pytest-playwright --quiet
+pip install pytest-playwright --quiet 2>/dev/null || pip install pytest-playwright
 echo -e "${GREEN}✓ Playwright Python package installed${NC}\n"
 
 # Step 6: Install Playwright system dependencies
@@ -200,20 +201,27 @@ source .env
 set +a
 
 # Check if we already have a Bearer token
-if [ -n "$QWEN_BEARER_TOKEN" ]; then
+if [ -n "$QWEN_BEARER_TOKEN" ] && [ "$QWEN_BEARER_TOKEN" != "your-bearer-token-here" ]; then
     echo -e "${GREEN}✓ Bearer token found in .env (${#QWEN_BEARER_TOKEN} chars)${NC}"
     echo -e "${CYAN}Token preview: ${QWEN_BEARER_TOKEN:0:30}...${QWEN_BEARER_TOKEN: -30}${NC}\n"
 else
     # Check credentials
-    if [ -z "$QWEN_EMAIL" ] || [ -z "$QWEN_PASSWORD" ]; then
-        echo -e "${RED}✗ QWEN_EMAIL or QWEN_PASSWORD not set in .env${NC}"
-        echo -e "${YELLOW}Please edit .env and add your credentials${NC}\n"
+    if [ -z "$QWEN_EMAIL" ] || [ "$QWEN_EMAIL" = "your-email@example.com" ]; then
+        echo -e "${RED}✗ QWEN_EMAIL not properly configured in .env${NC}"
+        echo -e "${YELLOW}Please edit .env and add your real email address${NC}\n"
+        exit 1
+    fi
+    
+    if [ -z "$QWEN_PASSWORD" ] || [ "$QWEN_PASSWORD" = "your-password" ]; then
+        echo -e "${RED}✗ QWEN_PASSWORD not properly configured in .env${NC}"
+        echo -e "${YELLOW}Please edit .env and add your real password${NC}\n"
         exit 1
     fi
 
-    echo -e "${CYAN}Extracting Bearer token using Playwright...${NC}"
+    echo -e "${CYAN}Attempting to extract Bearer token...${NC}\n"
     
-    # Run token extraction
+    # Try automated extraction first
+    echo -e "${BLUE}Method 1:${NC} Automated Playwright extraction..."
     if python3 test_auth.py > /tmp/token_extraction.log 2>&1; then
         # Extract token from output
         TOKEN=$(grep "QWEN_BEARER_TOKEN=" /tmp/token_extraction.log | cut -d'=' -f2)
@@ -232,14 +240,156 @@ else
             echo -e "${CYAN}Token preview: ${TOKEN:0:30}...${TOKEN: -30}${NC}"
             echo -e "${CYAN}Token length: ${#TOKEN} characters${NC}\n"
         else
-            echo -e "${RED}✗ Failed to extract token${NC}"
+            echo -e "${YELLOW}⚠ Automated extraction didn't find token${NC}\n"
             cat /tmp/token_extraction.log
-            exit 1
+            
+            # Fall back to manual method
+            echo -e "\n${BLUE}Method 2:${NC} Manual token extraction"
+            echo -e "${CYAN}${BOLD}═══════════════════════════════════════════════════════${NC}"
+            echo -e "${YELLOW}Please follow these steps to get your token manually:${NC}\n"
+            
+            echo -e "${WHITE}1.${NC} Open your browser and go to: ${CYAN}https://chat.qwen.ai${NC}"
+            echo -e "${WHITE}2.${NC} Log in to your Qwen account"
+            echo -e "${WHITE}3.${NC} Press ${BOLD}F12${NC} to open Developer Console"
+            echo -e "${WHITE}4.${NC} Go to the ${BOLD}Console${NC} tab"
+            echo -e "${WHITE}5.${NC} Copy and paste this JavaScript code:\n"
+            
+            echo -e "${CYAN}─────────────────────────────────────────────────────────${NC}"
+            cat << 'JSEOF'
+javascript:(function(){
+    if(window.location.hostname!=="chat.qwen.ai"){
+        alert("🚀 Please run this on chat.qwen.ai");
+        window.open("https://chat.qwen.ai","_blank");
+        return;
+    }
+    const token=localStorage.getItem("token");
+    if(!token){
+        alert("❌ Token not found in localStorage!");
+        console.log("Available localStorage keys:", Object.keys(localStorage));
+        return;
+    }
+    navigator.clipboard.writeText(token).then(()=>{
+        alert("🔑 Token copied to clipboard! 🎉");
+        console.log("Token length:", token.length, "characters");
+    }).catch(()=>{
+        prompt("🔰 Your token (copy it manually):", token);
+    });
+})();
+JSEOF
+            echo -e "${CYAN}─────────────────────────────────────────────────────────${NC}\n"
+            
+            echo -e "${WHITE}6.${NC} Press ${BOLD}Enter${NC} to run the code"
+            echo -e "${WHITE}7.${NC} The token will be copied to your clipboard"
+            echo -e "${WHITE}8.${NC} Paste it below when prompted\n"
+            
+            echo -e "${YELLOW}After you have the token, press Enter to continue...${NC}"
+            read -r
+            
+            echo -e "${CYAN}Please paste your Bearer token:${NC}"
+            read -r MANUAL_TOKEN
+            
+            if [ -n "$MANUAL_TOKEN" ]; then
+                # Trim whitespace
+                MANUAL_TOKEN=$(echo "$MANUAL_TOKEN" | xargs)
+                
+                # Validate token (basic check - should be a long string)
+                if [ ${#MANUAL_TOKEN} -lt 50 ]; then
+                    echo -e "${RED}✗ Token seems too short (${#MANUAL_TOKEN} chars). Expected > 50 chars${NC}"
+                    echo -e "${YELLOW}Please run the script again and make sure to copy the full token${NC}\n"
+                    exit 1
+                fi
+                
+                # Save to .env
+                if ! grep -q "QWEN_BEARER_TOKEN=" .env; then
+                    echo "" >> .env
+                    echo "QWEN_BEARER_TOKEN=$MANUAL_TOKEN" >> .env
+                else
+                    sed -i.bak "s|QWEN_BEARER_TOKEN=.*|QWEN_BEARER_TOKEN=$MANUAL_TOKEN|" .env
+                fi
+                
+                echo -e "${GREEN}✓ Bearer token saved to .env${NC}"
+                echo -e "${CYAN}Token preview: ${MANUAL_TOKEN:0:30}...${MANUAL_TOKEN: -30}${NC}"
+                echo -e "${CYAN}Token length: ${#MANUAL_TOKEN} characters${NC}\n"
+            else
+                echo -e "${RED}✗ No token provided${NC}\n"
+                exit 1
+            fi
         fi
     else
-        echo -e "${RED}✗ Token extraction failed${NC}"
+        echo -e "${YELLOW}⚠ Automated extraction failed${NC}\n"
         cat /tmp/token_extraction.log
-        exit 1
+        
+        # Fall back to manual method (same as above)
+        echo -e "\n${BLUE}Method 2:${NC} Manual token extraction"
+        echo -e "${CYAN}${BOLD}═══════════════════════════════════════════════════════${NC}"
+        echo -e "${YELLOW}Please follow these steps to get your token manually:${NC}\n"
+        
+        echo -e "${WHITE}1.${NC} Open your browser and go to: ${CYAN}https://chat.qwen.ai${NC}"
+        echo -e "${WHITE}2.${NC} Log in to your Qwen account"
+        echo -e "${WHITE}3.${NC} Press ${BOLD}F12${NC} to open Developer Console"
+        echo -e "${WHITE}4.${NC} Go to the ${BOLD}Console${NC} tab"
+        echo -e "${WHITE}5.${NC} Copy and paste this JavaScript code:\n"
+        
+        echo -e "${CYAN}─────────────────────────────────────────────────────────${NC}"
+        cat << 'JSEOF'
+javascript:(function(){
+    if(window.location.hostname!=="chat.qwen.ai"){
+        alert("🚀 Please run this on chat.qwen.ai");
+        window.open("https://chat.qwen.ai","_blank");
+        return;
+    }
+    const token=localStorage.getItem("token");
+    if(!token){
+        alert("❌ Token not found in localStorage!");
+        console.log("Available localStorage keys:", Object.keys(localStorage));
+        return;
+    }
+    navigator.clipboard.writeText(token).then(()=>{
+        alert("🔑 Token copied to clipboard! 🎉");
+        console.log("Token length:", token.length, "characters");
+    }).catch(()=>{
+        prompt("🔰 Your token (copy it manually):", token);
+    });
+})();
+JSEOF
+        echo -e "${CYAN}─────────────────────────────────────────────────────────${NC}\n"
+        
+        echo -e "${WHITE}6.${NC} Press ${BOLD}Enter${NC} to run the code"
+        echo -e "${WHITE}7.${NC} The token will be copied to your clipboard"
+        echo -e "${WHITE}8.${NC} Paste it below when prompted\n"
+        
+        echo -e "${YELLOW}After you have the token, press Enter to continue...${NC}"
+        read -r
+        
+        echo -e "${CYAN}Please paste your Bearer token:${NC}"
+        read -r MANUAL_TOKEN
+        
+        if [ -n "$MANUAL_TOKEN" ]; then
+            # Trim whitespace
+            MANUAL_TOKEN=$(echo "$MANUAL_TOKEN" | xargs)
+            
+            # Validate token
+            if [ ${#MANUAL_TOKEN} -lt 50 ]; then
+                echo -e "${RED}✗ Token seems too short (${#MANUAL_TOKEN} chars). Expected > 50 chars${NC}"
+                echo -e "${YELLOW}Please run the script again and make sure to copy the full token${NC}\n"
+                exit 1
+            fi
+            
+            # Save to .env
+            if ! grep -q "QWEN_BEARER_TOKEN=" .env; then
+                echo "" >> .env
+                echo "QWEN_BEARER_TOKEN=$MANUAL_TOKEN" >> .env
+            else
+                sed -i.bak "s|QWEN_BEARER_TOKEN=.*|QWEN_BEARER_TOKEN=$MANUAL_TOKEN|" .env
+            fi
+            
+            echo -e "${GREEN}✓ Bearer token saved to .env${NC}"
+            echo -e "${CYAN}Token preview: ${MANUAL_TOKEN:0:30}...${MANUAL_TOKEN: -30}${NC}"
+            echo -e "${CYAN}Token length: ${#MANUAL_TOKEN} characters${NC}\n"
+        else
+            echo -e "${RED}✗ No token provided${NC}\n"
+            exit 1
+        fi
     fi
 fi
 
