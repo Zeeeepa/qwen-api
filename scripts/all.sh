@@ -1,145 +1,278 @@
 #!/usr/bin/env bash
 ################################################################################
 # all.sh - Complete End-to-End Deployment and Testing
-# Runs: setup.sh + start.sh + send_request.sh + keeps server running
-# This is the "one command to rule them all" script
+#
+# This script orchestrates:
+# 1. Environment setup (setup.sh)
+# 2. Server startup (start.sh)
+# 3. Comprehensive testing (send_request.sh)
+# 4. Log monitoring
 ################################################################################
 
-set -e
+set -euo pipefail
 
-# Colors
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-CYAN='\033[0;36m'
-MAGENTA='\033[0;35m'
-BOLD='\033[1m'
-NC='\033[0m'
+# Color definitions
+readonly RED='\033[0;31m'
+readonly GREEN='\033[0;32m'
+readonly YELLOW='\033[1;33m'
+readonly BLUE='\033[0;34m'
+readonly CYAN='\033[0;36m'
+readonly MAGENTA='\033[0;35m'
+readonly BOLD='\033[1m'
+readonly NC='\033[0m'
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+# Project paths
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+readonly PID_FILE="${PROJECT_ROOT}/server.pid"
+readonly ENV_FILE="${PROJECT_ROOT}/.env"
 
 cd "$PROJECT_ROOT"
 
-echo -e "${MAGENTA}${BOLD}"
-echo "╔══════════════════════════════════════════════════════╗"
-echo "║                                                      ║"
-echo "║        🚀 Qwen API - Complete Deployment 🚀         ║"
-echo "║                                                      ║"
-echo "║  This script will:                                   ║"
-echo "║  1. ✅ Setup Python environment                     ║"
-echo "║  2. 📦 Install all dependencies                     ║"
-echo "║  3. 🌐 Install Playwright browsers                  ║"
-echo "║  4. 🔑 Retrieve/validate Bearer token               ║"
-echo "║  5. 🚀 Start the API server                         ║"
-echo "║  6. 🧪 Run comprehensive tests                      ║"
-echo "║  7. 📊 Display results                              ║"
-echo "║  8. 🔄 Keep server running                          ║"
-echo "║                                                      ║"
-echo "╚══════════════════════════════════════════════════════╝"
-echo -e "${NC}\n"
+################################################################################
+# Utility Functions
+################################################################################
 
-# Check if running in project root
-if [ ! -f "main.py" ]; then
-    echo -e "${RED}✗ Error: main.py not found!${NC}"
-    echo -e "${YELLOW}Please run this script from the project root directory${NC}\n"
-    exit 1
-fi
+log_success() {
+    echo -e "${GREEN}✓${NC} $1"
+}
 
-# Step 1: Setup
-echo -e "${CYAN}${BOLD}─────────────────────────────────────────────────────${NC}"
-echo -e "${CYAN}${BOLD}STEP 1/3: Running Setup${NC}"
-echo -e "${CYAN}${BOLD}─────────────────────────────────────────────────────${NC}\n"
+log_warning() {
+    echo -e "${YELLOW}⚠${NC} $1"
+}
 
-if [ -f "$SCRIPT_DIR/setup.sh" ]; then
-    bash "$SCRIPT_DIR/setup.sh"
-else
-    echo -e "${RED}✗ setup.sh not found at $SCRIPT_DIR/setup.sh${NC}\n"
-    exit 1
-fi
+log_error() {
+    echo -e "${RED}✗${NC} $1"
+}
 
-echo -e "${GREEN}✓ Setup completed successfully!${NC}\n"
-sleep 2
+log_info() {
+    echo -e "${CYAN}$1${NC}"
+}
 
-# Step 2: Start Server
-echo -e "${CYAN}${BOLD}─────────────────────────────────────────────────────${NC}"
-echo -e "${CYAN}${BOLD}STEP 2/3: Starting Server${NC}"
-echo -e "${CYAN}${BOLD}─────────────────────────────────────────────────────${NC}\n"
+print_header() {
+    echo -e "${MAGENTA}${BOLD}"
+    echo "╔══════════════════════════════════════════════════════╗"
+    echo "║                                                      ║"
+    echo "║        🚀 Qwen API - Complete Deployment 🚀         ║"
+    echo "║                                                      ║"
+    echo "║  This script will:                                   ║"
+    echo "║  1. ✅ Setup Python environment                     ║"
+    echo "║  2. 📦 Install all dependencies                     ║"
+    echo "║  3. 🌐 Install Playwright browsers                  ║"
+    echo "║  4. 🔑 Retrieve/validate Bearer token               ║"
+    echo "║  5. 🚀 Start the API server                         ║"
+    echo "║  6. 🧪 Run comprehensive tests                      ║"
+    echo "║  7. 📊 Display results                              ║"
+    echo "║  8. 🔄 Keep server running                          ║"
+    echo "║                                                      ║"
+    echo "╚══════════════════════════════════════════════════════╝"
+    echo -e "${NC}\n"
+}
 
-# Kill any existing server
-if [ -f "server.pid" ]; then
-    OLD_PID=$(cat server.pid)
-    if ps -p "$OLD_PID" > /dev/null 2>&1; then
-        echo -e "${YELLOW}⚠️ Killing existing server (PID: $OLD_PID)${NC}"
-        kill "$OLD_PID" 2>/dev/null || true
-        sleep 2
+print_step_header() {
+    local step=$1
+    local title=$2
+    
+    echo -e "${CYAN}${BOLD}─────────────────────────────────────────────────────${NC}"
+    echo -e "${CYAN}${BOLD}STEP $step/3: $title${NC}"
+    echo -e "${CYAN}${BOLD}─────────────────────────────────────────────────────${NC}\n"
+}
+
+print_footer() {
+    echo -e "${MAGENTA}${BOLD}"
+    echo "╔══════════════════════════════════════════════════════╗"
+    echo "║                                                      ║"
+    echo "║            🎉 Deployment Complete! 🎉               ║"
+    echo "║                                                      ║"
+    echo "╚══════════════════════════════════════════════════════╝"
+    echo -e "${NC}\n"
+}
+
+cleanup_on_exit() {
+    local exit_code=$?
+    if [[ $exit_code -ne 0 ]]; then
+        log_error "Deployment failed with exit code $exit_code"
+        
+        # Show last 20 lines of log if available
+        if [[ -f "logs/server.log" ]]; then
+            echo -e "\n${YELLOW}Last 20 lines of server log:${NC}"
+            echo -e "${CYAN}════════════════════════════════════════════════════${NC}"
+            tail -20 logs/server.log
+            echo -e "${CYAN}════════════════════════════════════════════════════${NC}\n"
+        fi
     fi
-    rm -f server.pid
-fi
+}
 
-if [ -f "$SCRIPT_DIR/start.sh" ]; then
-    bash "$SCRIPT_DIR/start.sh"
-else
-    echo -e "${RED}✗ start.sh not found at $SCRIPT_DIR/start.sh${NC}\n"
-    exit 1
-fi
+trap cleanup_on_exit EXIT
 
-echo -e "${GREEN}✓ Server started successfully!${NC}\n"
-sleep 3
+################################################################################
+# Validation Functions
+################################################################################
 
-# Step 3: Run Tests
-echo -e "${CYAN}${BOLD}─────────────────────────────────────────────────────${NC}"
-echo -e "${CYAN}${BOLD}STEP 3/3: Running Tests${NC}"
-echo -e "${CYAN}${BOLD}─────────────────────────────────────────────────────${NC}\n"
+check_project_root() {
+    if [[ ! -f "main.py" ]]; then
+        log_error "main.py not found!"
+        log_warning "Please run this script from the project root directory"
+        echo ""
+        exit 1
+    fi
+}
 
-if [ -f "$SCRIPT_DIR/send_request.sh" ]; then
-    bash "$SCRIPT_DIR/send_request.sh"
-    TEST_RESULT=$?
-else
-    echo -e "${RED}✗ send_request.sh not found at $SCRIPT_DIR/send_request.sh${NC}\n"
-    exit 1
-fi
+check_script_exists() {
+    local script_name=$1
+    local script_path="${SCRIPT_DIR}/${script_name}"
+    
+    if [[ ! -f "$script_path" ]]; then
+        log_error "$script_name not found at $script_path"
+        echo ""
+        exit 1
+    fi
+}
 
-# Final Summary
-echo -e "${MAGENTA}${BOLD}"
-echo "╔══════════════════════════════════════════════════════╗"
-echo "║                                                      ║"
-echo "║            🎉 Deployment Complete! 🎉               ║"
-echo "║                                                      ║"
-echo "╚══════════════════════════════════════════════════════╝"
-echo -e "${NC}\n"
+################################################################################
+# Process Management
+################################################################################
 
-# Load environment
-if [ -f ".env" ]; then
-    set -a
-    source .env
-    set +a
-fi
+kill_all_existing_servers() {
+    local port
+    
+    # Load port from env if available
+    if [[ -f "$ENV_FILE" ]]; then
+        # shellcheck source=/dev/null
+        set -a
+        source "$ENV_FILE"
+        set +a
+    fi
+    
+    port="${LISTEN_PORT:-8096}"
+    
+    # Kill by PID file
+    if [[ -f "$PID_FILE" ]]; then
+        local old_pid
+        old_pid=$(cat "$PID_FILE")
+        
+        if ps -p "$old_pid" > /dev/null 2>&1; then
+            log_warning "Killing existing server from PID file (PID: $old_pid)"
+            kill -9 "$old_pid" 2>/dev/null || true
+            sleep 2
+        fi
+        
+        rm -f "$PID_FILE"
+    fi
+    
+    # Kill by port (may be multiple processes)
+    if lsof -Pi ":$port" -sTCP:LISTEN -t >/dev/null 2>&1; then
+        log_warning "Port $port is in use, killing all processes..."
+        
+        local pids
+        pids=$(lsof -ti:"$port" 2>/dev/null || true)
+        
+        if [[ -n "$pids" ]]; then
+            echo "$pids" | while read -r pid; do
+                if [[ -n "$pid" ]]; then
+                    log_info "Killing process $pid"
+                    kill -9 "$pid" 2>/dev/null || true
+                fi
+            done
+            
+            sleep 3
+            
+            # Final verification
+            if lsof -Pi ":$port" -sTCP:LISTEN -t >/dev/null 2>&1; then
+                log_error "Failed to free port $port"
+                log_warning "Please manually kill processes: sudo lsof -ti:$port | xargs kill -9"
+                exit 1
+            fi
+            
+            log_success "All processes killed, port $port is now free"
+        fi
+    fi
+}
 
-PORT=${LISTEN_PORT:-8096}
+################################################################################
+# Deployment Steps
+################################################################################
 
-echo -e "${CYAN}Server Information:${NC}"
-echo -e "  ${BLUE}URL:${NC} http://localhost:$PORT"
-echo -e "  ${BLUE}Health:${NC} http://localhost:$PORT/health"
-echo -e "  ${BLUE}Models:${NC} http://localhost:$PORT/v1/models"
-if [ -f "server.pid" ]; then
-    echo -e "  ${BLUE}PID:${NC} $(cat server.pid)"
-fi
-echo ""
+run_setup() {
+    print_step_header "1" "Running Setup"
+    
+    check_script_exists "setup.sh"
+    bash "${SCRIPT_DIR}/setup.sh"
+    
+    log_success "Setup completed successfully!"
+    echo ""
+    sleep 2
+}
 
-echo -e "${CYAN}Useful Commands:${NC}"
-echo -e "  ${YELLOW}View logs:${NC} tail -f logs/server.log"
-echo -e "  ${YELLOW}Stop server:${NC} kill \$(cat server.pid)"
-echo -e "  ${YELLOW}Run tests again:${NC} bash scripts/send_request.sh"
-echo ""
+run_server_start() {
+    print_step_header "2" "Starting Server"
+    
+    # Clean up any existing servers first
+    kill_all_existing_servers
+    
+    check_script_exists "start.sh"
+    bash "${SCRIPT_DIR}/start.sh"
+    
+    log_success "Server started successfully!"
+    echo ""
+    sleep 3
+}
 
-echo -e "${CYAN}Example API Call (OpenAI Compatible):${NC}"
-echo -e "${BLUE}python3 -c '
+run_tests() {
+    print_step_header "3" "Running Tests"
+    
+    check_script_exists "send_request.sh"
+    
+    local test_result=0
+    bash "${SCRIPT_DIR}/send_request.sh" || test_result=$?
+    
+    return $test_result
+}
+
+################################################################################
+# Information Display
+################################################################################
+
+load_config() {
+    if [[ -f "$ENV_FILE" ]]; then
+        # shellcheck source=/dev/null
+        set -a
+        source "$ENV_FILE"
+        set +a
+    fi
+}
+
+print_server_info() {
+    local port="${LISTEN_PORT:-8096}"
+    
+    echo -e "${CYAN}Server Information:${NC}"
+    echo -e "  ${BLUE}URL:${NC} http://localhost:$port"
+    echo -e "  ${BLUE}Health:${NC} http://localhost:$port/health"
+    echo -e "  ${BLUE}Models:${NC} http://localhost:$port/v1/models"
+    
+    if [[ -f "$PID_FILE" ]]; then
+        echo -e "  ${BLUE}PID:${NC} $(cat "$PID_FILE")"
+    fi
+    echo ""
+}
+
+print_useful_commands() {
+    echo -e "${CYAN}Useful Commands:${NC}"
+    echo -e "  ${YELLOW}View logs:${NC} tail -f logs/server.log"
+    echo -e "  ${YELLOW}Stop server:${NC} kill \$(cat server.pid)"
+    echo -e "  ${YELLOW}Run tests again:${NC} bash scripts/send_request.sh"
+    echo ""
+}
+
+print_api_examples() {
+    local port="${LISTEN_PORT:-8096}"
+    
+    echo -e "${CYAN}Example API Call (OpenAI Compatible):${NC}"
+    echo -e "${BLUE}python3 << 'PYEOF'
 import openai
 
 client = openai.OpenAI(
-    base_url=\"http://localhost:$PORT/v1\",
+    base_url=\"http://localhost:$port/v1\",
     api_key=\"sk-test\"
 )
 
@@ -150,38 +283,37 @@ response = client.chat.completions.create(
 )
 
 print(response.choices[0].message.content)
-'${NC}"
-echo ""
-
-echo -e "${CYAN}Or using curl:${NC}"
-echo -e "${BLUE}curl -X POST http://localhost:$PORT/v1/chat/completions \\\\${NC}"
-echo -e "${BLUE}  -H 'Content-Type: application/json' \\\\${NC}"
-echo -e "${BLUE}  -H 'Authorization: Bearer sk-test' \\\\${NC}"
-echo -e "${BLUE}  -d '{${NC}"
-echo -e "${BLUE}    \"model\": \"qwen-turbo\",${NC}"
-echo -e "${BLUE}    \"messages\": [{\"role\": \"user\", \"content\": \"Hello!\"}],${NC}"
-echo -e "${BLUE}    \"stream\": false${NC}"
-echo -e "${BLUE}  }'${NC}"
-echo ""
-
-if [ $TEST_RESULT -eq 0 ]; then
-    echo -e "${GREEN}${BOLD}✓ All systems operational! Your Qwen API is ready to use.${NC}\n"
+PYEOF${NC}"
+    echo ""
     
+    echo -e "${CYAN}Or using curl:${NC}"
+    echo -e "${BLUE}curl -X POST http://localhost:$port/v1/chat/completions \\\\
+  -H 'Content-Type: application/json' \\\\
+  -H 'Authorization: Bearer sk-test' \\\\
+  -d '{
+    \"model\": \"qwen-turbo\",
+    \"messages\": [{\"role\": \"user\", \"content\": \"Hello!\"}],
+    \"stream\": false
+  }'${NC}"
+    echo ""
+}
+
+watch_logs() {
     echo -e "${CYAN}${BOLD}Server is running in background...${NC}"
     echo -e "${YELLOW}Press Ctrl+C to stop watching logs (server will keep running)${NC}"
     echo -e "${YELLOW}To stop server: kill \$(cat server.pid)${NC}\n"
     
-    # Follow logs
     echo -e "${CYAN}${BOLD}Streaming logs (Ctrl+C to exit):${NC}"
     echo -e "${CYAN}════════════════════════════════════════════════════${NC}\n"
     
-    # Trap Ctrl+C
+    # Trap Ctrl+C gracefully
     trap 'echo -e "\n${YELLOW}Stopped watching logs. Server still running.${NC}\n"; exit 0' INT
     
     tail -f logs/server.log
-    
-else
-    echo -e "${YELLOW}${BOLD}⚠️ Some tests failed. Check the logs for details.${NC}"
+}
+
+handle_test_failure() {
+    echo -e "${YELLOW}${BOLD}⚠ Some tests failed. Check the logs for details.${NC}"
     echo -e "${BLUE}Logs location:${NC} logs/server.log\n"
     
     echo -e "${CYAN}Server is still running. You can:${NC}"
@@ -189,7 +321,42 @@ else
     echo -e "  ${YELLOW}→${NC} Run tests: bash scripts/send_request.sh"
     echo -e "  ${YELLOW}→${NC} Stop server: kill \$(cat server.pid)"
     echo ""
-    
-    exit 1
-fi
+}
 
+################################################################################
+# Main Execution
+################################################################################
+
+main() {
+    print_header
+    check_project_root
+    
+    # Step 1: Setup
+    run_setup
+    
+    # Step 2: Start Server
+    run_server_start
+    
+    # Step 3: Run Tests
+    local test_result=0
+    run_tests || test_result=$?
+    
+    # Display Results
+    print_footer
+    load_config
+    print_server_info
+    print_useful_commands
+    print_api_examples
+    
+    # Handle results
+    if [[ $test_result -eq 0 ]]; then
+        log_success "All systems operational! Your Qwen API is ready to use."
+        echo ""
+        watch_logs
+    else
+        handle_test_failure
+        exit 1
+    fi
+}
+
+main "$@"
