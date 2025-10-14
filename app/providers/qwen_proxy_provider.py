@@ -23,7 +23,7 @@ API Endpoint: https://qwen.aikit.club/v1/
 import asyncio
 import json
 import time
-from typing import Any, AsyncGenerator, Dict, List, Optional
+from typing import Any, AsyncGenerator, Dict, List, Optional, Union
 
 import httpx
 
@@ -156,12 +156,16 @@ class QwenProxyProvider(BaseProvider):
     async def chat_completion(
         self,
         request: OpenAIRequest
-    ) -> AsyncGenerator[str, None]:
+    ) -> Union[Dict[str, Any], AsyncGenerator[str, None]]:
         """
         Send chat completion request to Qwen proxy
         
         This uses the standard OpenAI format - the proxy handles all Qwen-specific
         conversions internally.
+        
+        Returns:
+            - Dict: Non-streaming response (when request.stream=False)
+            - AsyncGenerator: Streaming response (when request.stream=True)
         """
         try:
             # Ensure we're initialized
@@ -198,7 +202,52 @@ class QwenProxyProvider(BaseProvider):
             # Get auth headers
             headers = await self.get_auth_headers()
 
-            # Make request
+            # Handle streaming vs non-streaming differently
+            if request.stream:
+                # Return async generator for streaming
+                return self._stream_completion(request_body, headers)
+            else:
+                # Return dict directly for non-streaming
+                return await self._non_stream_completion(request_body, headers)
+
+        except Exception as e:
+            logger.error(f"❌ Chat completion error: {e}", exc_info=True)
+            raise
+
+    async def _non_stream_completion(
+        self,
+        request_body: Dict[str, Any],
+        headers: Dict[str, str]
+    ) -> Dict[str, Any]:
+        """Handle non-streaming completion request"""
+        try:
+            response = await self.http_client.post(
+                self.CHAT_COMPLETIONS_ENDPOINT,
+                json=request_body,
+                headers=headers
+            )
+            
+            if response.status_code != 200:
+                error_text = response.text
+                logger.error(f"❌ Proxy returned error {response.status_code}: {error_text}")
+                raise ValueError(f"Proxy error: {response.status_code}")
+            
+            # Parse and return JSON response
+            result = response.json()
+            logger.info("✅ Non-streaming completion successful")
+            return result
+            
+        except Exception as e:
+            logger.error(f"❌ Non-streaming completion error: {e}", exc_info=True)
+            raise
+
+    async def _stream_completion(
+        self,
+        request_body: Dict[str, Any],
+        headers: Dict[str, str]
+    ) -> AsyncGenerator[str, None]:
+        """Handle streaming completion request"""
+        try:
             async with self.http_client.stream(
                 "POST",
                 self.CHAT_COMPLETIONS_ENDPOINT,
@@ -213,19 +262,14 @@ class QwenProxyProvider(BaseProvider):
                     raise ValueError(f"Proxy error: {response.status_code}")
 
                 # Stream response
-                if request.stream:
-                    async for line in response.aiter_lines():
-                        if line.strip():
-                            # Proxy returns SSE format: "data: {...}"
-                            if line.startswith("data: "):
-                                yield line + "\n\n"
-                else:
-                    # Non-streaming: read full response
-                    content = await response.aread()
-                    yield content.decode()
-
+                async for line in response.aiter_lines():
+                    if line.strip():
+                        # Proxy returns SSE format: "data: {...}"
+                        if line.startswith("data: "):
+                            yield line + "\n\n"
+                            
         except Exception as e:
-            logger.error(f"❌ Chat completion error: {e}", exc_info=True)
+            logger.error(f"❌ Streaming completion error: {e}", exc_info=True)
             raise
 
     async def list_models(self) -> List[str]:
