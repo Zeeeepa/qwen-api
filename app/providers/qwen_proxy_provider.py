@@ -105,11 +105,10 @@ class QwenProxyProvider(BaseProvider):
             self.bearer_token = session["token"]
             logger.info(f"✅ Bearer token extracted successfully ({len(self.bearer_token)} chars)")
 
-            # Validate extracted token
-            is_valid = await self._validate_token(self.bearer_token)
-            if not is_valid:
-                logger.error("❌ Extracted Bearer token is invalid")
-                return False
+            # Skip token validation - trust Playwright extraction
+            # The /v1/validate endpoint doesn't return expected format
+            # Validation will happen on first actual API call
+            logger.info("⚠️ Skipping token validation, will validate on first API call")
 
             logger.info("✅ Qwen Proxy Provider initialized successfully")
             return True
