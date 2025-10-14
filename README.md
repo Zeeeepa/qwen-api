@@ -73,47 +73,199 @@ http://localhost:8080
 
 ## 🔐 Authentication
 
-All API requests require a Bearer token containing your Qwen credentials.
+All API requests require **Bearer authentication**. The Bearer token gives access to the "bearer of the token" and must be sent in the `Authorization` header.
+
+### Bearer Token Format
+
+```http
+Authorization: Bearer YOUR_QWEN_TOKEN
+```
+
+The token is a JWT (JSON Web Token) that authenticates your requests to the Qwen API.
+
+---
 
 ### Getting Your Qwen Token
 
+There are **two methods** to obtain your authentication token:
 
-USE PLAYWRIGHT TO LOG IN TO QWEN account 
+#### Method 1: Automated with Playwright (Recommended)
 
-Login: "https://chat.qwen.ai/auth?action=signin"
+The setup script uses Playwright to automatically log in and extract your token:
 
-To use in setup.sh step set qwen email and password to log in-> and then properly use this JS code to copy token ->
-```javascript
-javascript:(function(){if(window.location.hostname!=="chat.qwen.ai"){alert("🚀 This code is for chat.qwen.ai");window.open("https://chat.qwen.ai","_blank");return;}
-function getApiKeyData(){const token=localStorage.getItem("token");if(!token){alert("❌ qwen access_token not found !!!");return null;}
-return token;}
-async function copyToClipboard(text){try{await navigator.clipboard.writeText(text);return true;}catch(err){console.error("❌ Failed to copy to clipboard:",err);const textarea=document.createElement("textarea");textarea.value=text;textarea.style.position="fixed";textarea.style.opacity="0";document.body.appendChild(textarea);textarea.focus();textarea.select();const success=document.execCommand("copy");document.body.removeChild(textarea);return success;}}
-const apiKeyData=getApiKeyData();if(!apiKeyData)return;copyToClipboard(apiKeyData).then((success)=>{if(success){alert("🔑 Qwen access_token copied to clipboard !!! 🎉");}else{prompt("🔰 Qwen access_token:",apiKeyData);}});})();
-```
-AFTER TOKEN IS COPIED -> IT SHOULD BE PASTED INTO .env file and saved. 
-
-
-### Using Authentication
-
-Include the Bearer token in all requests:
 ```bash
-curl http://localhost:8080/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_QWEN_TOKEN" \
-  -d '{
-    "model": "qwen-turbo",
-    "messages": [{"role": "user", "content": "Hello!"}],
-    "stream": false
-  }'
+# Set your credentials in environment variables
+export QWEN_EMAIL=your-email@example.com
+export QWEN_PASSWORD=your-password
+
+# Or add to .env file
+echo "QWEN_EMAIL=your-email@example.com" >> .env
+echo "QWEN_PASSWORD=your-password" >> .env
+
+# Run setup script
+bash scripts/setup.sh
 ```
 
-THIS TO BE IMPLEMENTED WITH PLAYWRIGHT.
+#### Method 2: Manual Token Extraction
+
+1. Visit [https://chat.qwen.ai/auth?action=signin](https://chat.qwen.ai/auth?action=signin)
+2. Log in with your Qwen account
+3. Open Developer Console (F12)
+4. Run this JavaScript code in the console:
+
 ```javascript
 javascript:(function(){if(window.location.hostname!=="chat.qwen.ai"){alert("🚀 This code is for chat.qwen.ai");window.open("https://chat.qwen.ai","_blank");return;}
 function getApiKeyData(){const token=localStorage.getItem("token");if(!token){alert("❌ qwen access_token not found !!!");return null;}
 return token;}
 async function copyToClipboard(text){try{await navigator.clipboard.writeText(text);return true;}catch(err){console.error("❌ Failed to copy to clipboard:",err);const textarea=document.createElement("textarea");textarea.value=text;textarea.style.position="fixed";textarea.style.opacity="0";document.body.appendChild(textarea);textarea.focus();textarea.select();const success=document.execCommand("copy");document.body.removeChild(textarea);return success;}}
 const apiKeyData=getApiKeyData();if(!apiKeyData)return;copyToClipboard(apiKeyData).then((success)=>{if(success){alert("🔑 Qwen access_token copied to clipboard !!! 🎉");}else{prompt("🔰 Qwen access_token:",apiKeyData);}});})();
+```
+
+5. Your token will be copied to clipboard
+6. Save it to your `.env` file:
+
+```bash
+echo "QWEN_TOKEN=your-copied-token-here" >> .env
+```
+
+---
+
+### Using Bearer Authentication
+
+**Include the Bearer token in the Authorization header for all API requests:**
+
+#### Example with cURL
+
+```bash
+curl --request POST \
+     --url http://localhost:8080/v1/chat/completions \
+     --header 'Authorization: Bearer YOUR_QWEN_TOKEN' \
+     --header 'Content-Type: application/json' \
+     --data '{
+       "model": "qwen-turbo",
+       "messages": [{"role": "user", "content": "Hello!"}],
+       "stream": false
+     }'
+```
+
+#### Example with JavaScript (axios)
+
+```javascript
+import axios from 'axios';
+
+const options = {
+  method: 'POST',
+  url: 'http://localhost:8080/v1/chat/completions',
+  headers: {
+    'Authorization': 'Bearer YOUR_QWEN_TOKEN',
+    'Content-Type': 'application/json',
+    'Accept': 'application/json'
+  },
+  data: {
+    model: 'qwen-turbo',
+    messages: [{role: 'user', content: 'Hello!'}],
+    stream: false
+  }
+};
+
+axios.request(options)
+  .then(res => console.log(res.data))
+  .catch(err => console.error(err));
+```
+
+#### Example with Python (requests)
+
+```python
+import requests
+
+headers = {
+    'Authorization': 'Bearer YOUR_QWEN_TOKEN',
+    'Content-Type': 'application/json'
+}
+
+data = {
+    'model': 'qwen-turbo',
+    'messages': [{'role': 'user', 'content': 'Hello!'}],
+    'stream': False
+}
+
+response = requests.post(
+    'http://localhost:8080/v1/chat/completions',
+    headers=headers,
+    json=data
+)
+
+print(response.json())
+```
+
+#### Example with OpenAI SDK
+
+```python
+from openai import OpenAI
+
+client = OpenAI(
+    base_url="http://localhost:8080/v1",
+    api_key="YOUR_QWEN_TOKEN"  # Bearer token goes here
+)
+
+response = client.chat.completions.create(
+    model="qwen-turbo",
+    messages=[{"role": "user", "content": "Hello!"}]
+)
+
+print(response.choices[0].message.content)
+```
+
+---
+
+### Token Security Best Practices
+
+⚠️ **Important Security Notes:**
+
+- **Never share your Bearer token** - it's equivalent to your password
+- **Never commit tokens to version control** - use `.env` files (add to `.gitignore`)
+- **Store tokens in environment variables** - not hardcoded in source code
+- **Rotate tokens regularly** - refresh your token periodically for security
+- **Use HTTPS in production** - protect tokens in transit
+
+---
+
+### Token Validation
+
+Verify your token is valid before making requests:
+
+```bash
+curl --request POST \
+     --url http://localhost:8080/v1/validate \
+     --header 'Content-Type: application/json' \
+     --data '{"token": "YOUR_QWEN_TOKEN"}'
+```
+
+**Success Response:**
+```json
+{
+  "id": "user-id",
+  "email": "your-email@example.com",
+  "name": "Your Name",
+  "role": "user",
+  "token_type": "Bearer"
+}
+```
+
+---
+
+### Token Expiration
+
+Qwen tokens are JWT tokens with an expiration time. When your token expires:
+
+1. Run the token extraction script again
+2. Update your `.env` file with the new token
+3. Restart the server if needed
+
+**Check token expiration:**
+```bash
+# Decode JWT to see expiration (Unix timestamp)
+echo "YOUR_TOKEN" | cut -d'.' -f2 | base64 -d 2>/dev/null | jq .exp
 ```
 
 
