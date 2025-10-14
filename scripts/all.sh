@@ -164,35 +164,50 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 ################################################################################
-# Step 1: Deployment
+# Step 1: Setup
 ################################################################################
 
-run_deployment() {
-    log_step "STEP 1/4: DEPLOYMENT"
+run_setup() {
+    log_step "STEP 1/4: SETUP & TOKEN EXTRACTION"
     
     if [ "$SKIP_DEPLOY" = true ]; then
-        log_warning "Skipping deployment (--skip-deploy flag)"
+        log_warning "Skipping setup (--skip-deploy flag)"
         return 0
     fi
     
-    # Check if already deployed
+    # Check if already set up
     if [ -f ".venv/bin/activate" ] && [ -f ".qwen_bearer_token" ]; then
-        log_info "Existing installation detected"
-        read -p "Skip deployment? [Y/n] " -n 1 -r
-        echo
-        if [[ $REPLY =~ ^[Yy]$ ]] || [[ -z $REPLY ]]; then
-            log_info "Using existing installation"
+        TOKEN_AGE=$(($(date +%s) - $(stat -c %Y .qwen_bearer_token 2>/dev/null || stat -f %m .qwen_bearer_token 2>/dev/null || echo 0)))
+        
+        if [ $TOKEN_AGE -lt 86400 ]; then  # Less than 24 hours old
+            log_info "Recent installation detected (token age: $((TOKEN_AGE / 3600))h)"
+            log_info "Using existing setup"
             return 0
+        else
+            log_warning "Token is older than 24 hours, refreshing..."
         fi
     fi
     
-    log_info "Running deployment script..."
-    bash "${SCRIPT_DIR}/deploy.sh"
+    log_info "Running setup script with Playwright token extraction..."
+    echo ""
+    
+    # Check credentials
+    if [ -z "${QWEN_EMAIL:-}" ] || [ -z "${QWEN_PASSWORD:-}" ]; then
+        log_error "Missing credentials!"
+        echo ""
+        echo -e "${YELLOW}Please set your credentials:${NC}"
+        echo -e "  ${CYAN}export QWEN_EMAIL=your-email@example.com${NC}"
+        echo -e "  ${CYAN}export QWEN_PASSWORD='your-password'${NC}"
+        echo ""
+        exit 1
+    fi
+    
+    bash "${SCRIPT_DIR}/setup.sh"
     
     if [ $? -eq 0 ]; then
-        log_success "Deployment completed successfully"
+        log_success "Setup completed successfully"
     else
-        log_error "Deployment failed"
+        log_error "Setup failed"
         exit 1
     fi
 }
@@ -278,11 +293,12 @@ test_api() {
         return 0
     fi
     
-    log_info "Running OpenAI API compatibility tests..."
+    log_info "Running OpenAI API test..."
+    log_info "Asking: 'What is GRAPH-RAG?'"
     echo ""
     
-    # Run basic test
-    bash "${SCRIPT_DIR}/send_openai_request.sh" --port "$PORT" --verbose
+    # Run test with send_request.sh
+    bash "${SCRIPT_DIR}/send_request.sh" --port "$PORT"
     
     if [ $? -eq 0 ]; then
         log_success "API test passed!"
@@ -439,14 +455,14 @@ main() {
     log_info "Configuration:"
     echo -e "  Port: ${YELLOW}${PORT}${NC}"
     echo -e "  Provider: ${YELLOW}${PROVIDER_MODE}${NC}"
-    echo -e "  Skip Deploy: ${YELLOW}${SKIP_DEPLOY}${NC}"
+    echo -e "  Skip Setup: ${YELLOW}${SKIP_DEPLOY}${NC}"
     echo -e "  Skip Tests: ${YELLOW}${NO_TEST}${NC}"
     
     # Run workflow
-    run_deployment
-    start_server
-    test_api
-    display_summary
+    run_setup        # Step 1: Setup + Playwright token extraction
+    start_server     # Step 2: Start server
+    test_api         # Step 3: Test API with "What is GRAPH-RAG?"
+    display_summary  # Step 4: Show summary
     
     # Interactive mode
     interactive_mode
@@ -454,4 +470,3 @@ main() {
 
 # Run main
 main "$@"
-
