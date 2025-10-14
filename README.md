@@ -969,6 +969,17 @@ const response = await fetch("https://qwen.aikit.club/v1/chat/completions", {
 });
 ```
 
+## 📚 Documentation
+
+For more detailed documentation:
+
+- **[📖 Complete Documentation](docs/)** - Full documentation index
+- **[🚀 Installation Guide](docs/guides/install.md)** - Detailed setup instructions
+- **[⚡ Quickstart](docs/guides/quickstart.md)** - Get started in 5 minutes
+- **[🔑 Get Bearer Token](docs/guides/get-token.md)** - Token extraction guide
+- **[🧪 Testing](tests/README.md)** - Run tests and validation
+- **[💡 Examples](examples/)** - Code examples and use cases
+
 ## 📜 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

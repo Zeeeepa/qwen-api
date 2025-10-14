@@ -372,8 +372,8 @@ extract_bearer_token() {
     
     log_info "Attempting automated token extraction..."
     
-    # Try automated extraction
-    if python3 scripts/test_auth.py > /tmp/token_extraction.log 2>&1; then
+    # Try automated extraction (updated path: tests/integration/test_auth.py)
+    if python3 tests/integration/test_auth.py > /tmp/token_extraction.log 2>&1; then
         # Extract token from output
         TOKEN=$(grep "QWEN_BEARER_TOKEN=" /tmp/token_extraction.log | cut -d'=' -f2 | tr -d '[:space:]')
         

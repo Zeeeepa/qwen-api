@@ -63,3 +63,7 @@ sessions/
 *.pyc
 __pycache__/
 
+# Backups (local development safety)
+.backup/
+*.backup
+*.bak
