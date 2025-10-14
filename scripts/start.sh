@@ -34,6 +34,7 @@ readonly PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 readonly ENV_FILE="${PROJECT_ROOT}/.env"
 readonly TOKEN_FILE="${PROJECT_ROOT}/.qwen_bearer_token"
 readonly PID_FILE="${PROJECT_ROOT}/.server.pid"
+readonly VENV_ACTIVATE="${PROJECT_ROOT}/.venv/bin/activate"
 
 # Default configuration
 PORT=8096
@@ -42,6 +43,11 @@ BACKGROUND_MODE=false
 TEST_MODE=false
 
 cd "$PROJECT_ROOT"
+
+# Activate virtual environment if it exists
+if [ -f "$VENV_ACTIVATE" ]; then
+    source "$VENV_ACTIVATE"
+fi
 
 ################################################################################
 # Utility Functions
@@ -396,4 +402,3 @@ main() {
 
 # Run main
 main "$@"
-
