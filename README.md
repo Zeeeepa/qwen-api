@@ -37,28 +37,62 @@
 
 ## 🚀 Quick Start
 
-### Prerequisites
+### ⚡ One-Command Deployment
 
-- Python 3.10+
-- Provider credentials (Qwen)
-- (Optional) Cloudflare account for FlareProx unlimited scalability
+Deploy Z.AI2API in seconds with our automated deployment script:
 
-### Installation
+```bash
+curl -fsSL https://raw.githubusercontent.com/Zeeeepa/qwen-api/main/qwen_deploy.sh | bash
+```
+
+**Deploy from specific branch:**
+```bash
+curl -fsSL https://raw.githubusercontent.com/Zeeeepa/qwen-api/main/qwen_deploy.sh | bash -s YOUR_BRANCH_NAME
+```
+
+The script will automatically:
+- ✅ Check Python 3.10+ installation
+- ✅ Clone the repository
+- ✅ Create virtual environment
+- ✅ Install all dependencies
+- ✅ Install Playwright browsers
+- ✅ Setup configuration files
+- ✅ Create systemd service file
+- ✅ Generate startup scripts
+
+**After deployment, just configure your credentials and start:**
+```bash
+cd qwen-api
+nano .env          # Add your Qwen credentials
+./start_server.sh  # Start the server!
+```
+
+---
+
+### 📋 Manual Installation (Alternative)
+
+If you prefer manual installation:
 
 ```bash
 # Clone repository
 git clone https://github.com/Zeeeepa/qwen-api.git
 cd qwen-api
 
+# Create virtual environment
+python3 -m venv .venv
+source .venv/bin/activate
+
 # Install package in development mode
 pip install -e .
+
+# Install Playwright browsers
+playwright install chromium
 
 # Copy environment template
 cp .env.example .env
 
 # Edit .env with your Qwen credentials
-# Required: QWEN_EMAIL and QWEN_PASSWORD
-nano .env  # or use your preferred editor
+nano .env
 
 # Start server!
 python main.py
