@@ -2,6 +2,7 @@
 ################################################################################
 # setup.sh - Environment Setup and Bearer Token Retrieval
 # This script sets up the Python environment and extracts the Bearer token
+# Updated to handle Ubuntu 24.04 (Noble) t64 library transitions
 ################################################################################
 
 set -e
@@ -26,7 +27,7 @@ echo -e "${CYAN}${BOLD}    Qwen API - Environment Setup & Token Retrieval     ${
 echo -e "${CYAN}${BOLD}═══════════════════════════════════════════════════════${NC}\n"
 
 # Step 1: Check Python
-echo -e "${BLUE}[1/6]${NC} Checking Python installation..."
+echo -e "${BLUE}[1/7]${NC} Checking Python installation..."
 if ! command -v python3 &> /dev/null; then
     echo -e "${RED}✗ Python 3 not found!${NC}"
     exit 1
@@ -34,12 +35,8 @@ fi
 PYTHON_VERSION=$(python3 --version | awk '{print $2}')
 echo -e "${GREEN}✓ Python $PYTHON_VERSION found${NC}\n"
 
-
-pip install pytest-playwright
-playwright install
-playwright install-deps chromium
 # Step 2: Check uv
-echo -e "${BLUE}[2/6]${NC} Checking uv package manager..."
+echo -e "${BLUE}[2/7]${NC} Checking uv package manager..."
 if ! command -v uv &> /dev/null; then
     echo -e "${YELLOW}⚠ uv not found, installing...${NC}"
     curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -48,7 +45,7 @@ fi
 echo -e "${GREEN}✓ uv package manager ready${NC}\n"
 
 # Step 3: Create virtual environment
-echo -e "${BLUE}[3/6]${NC} Setting up virtual environment..."
+echo -e "${BLUE}[3/7]${NC} Setting up virtual environment..."
 if [ ! -d ".venv" ]; then
     uv venv
     echo -e "${GREEN}✓ Virtual environment created${NC}"
@@ -58,39 +55,125 @@ fi
 echo ""
 
 # Step 4: Install dependencies
-echo -e "${BLUE}[4/6]${NC} Installing dependencies..."
+echo -e "${BLUE}[4/7]${NC} Installing dependencies..."
 source .venv/bin/activate
 uv pip install -r requirements.txt --quiet
 echo -e "${GREEN}✓ Dependencies installed${NC}\n"
 
-# Step 5: Install Playwright browsers
-echo -e "${BLUE}[5/6]${NC} Installing Playwright browsers..."
+# Step 5: Install pytest-playwright
+echo -e "${BLUE}[5/7]${NC} Installing Playwright Python package..."
+pip install pytest-playwright --quiet
+echo -e "${GREEN}✓ Playwright Python package installed${NC}\n"
 
-# Try to install without system deps first
-if playwright install chromium --quiet 2>/dev/null; then
-    echo -e "${GREEN}✓ Playwright browsers installed${NC}\n"
+# Step 6: Install Playwright system dependencies
+echo -e "${BLUE}[6/7]${NC} Installing Playwright system dependencies..."
+
+# Detect OS
+if [ -f /etc/os-release ]; then
+    . /etc/os-release
+    OS=$ID
+    VERSION=$VERSION_ID
 else
-    # If that fails, provide clear instructions
-    echo -e "${YELLOW}⚠ Playwright browser installation requires system dependencies${NC}"
-    echo ""
-    echo -e "${CYAN}${BOLD}Please run the following command manually:${NC}"
-    echo -e "${WHITE}  sudo playwright install-deps chromium${NC}"
-    echo ""
-    echo -e "${CYAN}Then run this script again to continue setup.${NC}"
-    echo -e "${CYAN}Or install manually: playwright install chromium${NC}\n"
-    
-    # Check if user wants to continue anyway
-    read -p "Continue without Playwright? (y/N) " -n 1 -r
-    echo ""
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        exit 1
-    fi
-    echo -e "${YELLOW}⚠ Continuing without Playwright browsers${NC}"
-    echo -e "${YELLOW}⚠ Token extraction will fail - you'll need to provide QWEN_BEARER_TOKEN manually${NC}\n"
+    OS=$(uname -s)
 fi
 
-# Step 6: Retrieve Bearer Token
-echo -e "${BLUE}[6/6]${NC} Retrieving Bearer Token..."
+echo -e "${CYAN}Detected OS: $OS $VERSION${NC}"
+
+# Handle Ubuntu 24.04 (Noble) t64 library issues
+if [ "$OS" = "ubuntu" ] && [ "$VERSION" = "24.04" ]; then
+    echo -e "${YELLOW}⚠ Ubuntu 24.04 detected - installing t64 compatible dependencies${NC}"
+    
+    if [ "$EUID" -ne 0 ]; then
+        echo -e "${CYAN}Installing system dependencies (requires sudo)...${NC}"
+        sudo apt-get update -qq
+        sudo apt-get install -y -qq \
+            libasound2t64 \
+            libatk-bridge2.0-0t64 \
+            libatk1.0-0t64 \
+            libatspi2.0-0t64 \
+            libcups2t64 \
+            libdrm2 \
+            libgbm1 \
+            libglib2.0-0t64 \
+            libnspr4 \
+            libnss3 \
+            libpango-1.0-0 \
+            libx11-6 \
+            libxcb1 \
+            libxcomposite1 \
+            libxdamage1 \
+            libxext6 \
+            libxfixes3 \
+            libxkbcommon0 \
+            libxrandr2 \
+            xvfb \
+            fonts-liberation \
+            fonts-noto-color-emoji \
+            2>&1 | grep -v "Selecting previously unselected" | grep -v "Unpacking" | grep -v "Setting up" || true
+        
+        echo -e "${GREEN}✓ System dependencies installed${NC}"
+    else
+        apt-get update -qq
+        apt-get install -y -qq \
+            libasound2t64 \
+            libatk-bridge2.0-0t64 \
+            libatk1.0-0t64 \
+            libatspi2.0-0t64 \
+            libcups2t64 \
+            libdrm2 \
+            libgbm1 \
+            libglib2.0-0t64 \
+            libnspr4 \
+            libnss3 \
+            libpango-1.0-0 \
+            libx11-6 \
+            libxcb1 \
+            libxcomposite1 \
+            libxdamage1 \
+            libxext6 \
+            libxfixes3 \
+            libxkbcommon0 \
+            libxrandr2 \
+            xvfb \
+            fonts-liberation \
+            fonts-noto-color-emoji \
+            2>&1 | grep -v "Selecting previously unselected" | grep -v "Unpacking" | grep -v "Setting up" || true
+        
+        echo -e "${GREEN}✓ System dependencies installed${NC}"
+    fi
+    
+    # Now install Chromium browser
+    echo -e "${CYAN}Installing Chromium browser...${NC}"
+    playwright install chromium --quiet 2>/dev/null || playwright install chromium
+    echo -e "${GREEN}✓ Chromium browser installed${NC}\n"
+    
+else
+    # For other OS versions, try the standard Playwright installer
+    if [ "$EUID" -ne 0 ]; then
+        echo -e "${CYAN}Installing Playwright dependencies (requires sudo)...${NC}"
+        if sudo playwright install-deps chromium --quiet 2>/dev/null; then
+            echo -e "${GREEN}✓ System dependencies installed${NC}"
+        else
+            echo -e "${YELLOW}⚠ Standard installation failed, trying manual approach...${NC}"
+            sudo playwright install-deps chromium
+        fi
+    else
+        if playwright install-deps chromium --quiet 2>/dev/null; then
+            echo -e "${GREEN}✓ System dependencies installed${NC}"
+        else
+            echo -e "${YELLOW}⚠ Standard installation failed, trying manual approach...${NC}"
+            playwright install-deps chromium
+        fi
+    fi
+    
+    # Install Chromium browser
+    echo -e "${CYAN}Installing Chromium browser...${NC}"
+    playwright install chromium --quiet 2>/dev/null || playwright install chromium
+    echo -e "${GREEN}✓ Chromium browser installed${NC}\n"
+fi
+
+# Step 7: Retrieve Bearer Token
+echo -e "${BLUE}[7/7]${NC} Retrieving Bearer Token..."
 
 # Check if .env exists
 if [ ! -f ".env" ]; then
