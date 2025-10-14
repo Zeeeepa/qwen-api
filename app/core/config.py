@@ -4,8 +4,12 @@ import os
 from typing import Dict, List, Optional
 
 from pydantic_settings import BaseSettings
+from dotenv import load_dotenv
 
 from app.utils.logger import logger
+
+# Load environment variables from .env file
+load_dotenv()
 
 
 class Settings(BaseSettings):
@@ -14,6 +18,14 @@ class Settings(BaseSettings):
     # API Configuration
     API_ENDPOINT: str = "https://chat.qwen.ai/api/chat/completions"
     AUTH_TOKEN: str = os.getenv("AUTH_TOKEN", "sk-your-api-key")
+    
+    # Qwen Provider Credentials (Optional - for automated login)
+    QWEN_EMAIL: Optional[str] = None
+    QWEN_PASSWORD: Optional[str] = None
+    QWEN_BEARER_TOKEN: Optional[str] = None
+    
+    # FlareProx Configuration (Optional)
+    FLAREPROX_ENABLED: bool = False
 
     # 认证token文件路径（可选）
     AUTH_TOKENS_FILE: Optional[str] = os.getenv("AUTH_TOKENS_FILE")
@@ -154,7 +166,6 @@ class Settings(BaseSettings):
     ANONYMOUS_MODE: bool = os.getenv("ANONYMOUS_MODE", "true").lower() == "true"
     TOOL_SUPPORT: bool = os.getenv("TOOL_SUPPORT", "true").lower() == "true"
     SCAN_LIMIT: int = int(os.getenv("SCAN_LIMIT", "200000"))
-    SKIP_AUTH_TOKEN: bool = os.getenv("SKIP_AUTH_TOKEN", "false").lower() == "true"
 
 
     # Retry Configuration

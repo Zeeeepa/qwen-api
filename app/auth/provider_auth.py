@@ -197,11 +197,10 @@ class QwenAuth(ProviderAuth):
         Steps:
         1. Navigate to Qwen chat
         2. Fill in credentials
-        3. Extract web_api_auth_token from localStorage
-        4. Extract ssxmod_itna from cookies
-        5. Compress credentials into Bearer token
+        3. Extract 'token' from localStorage (raw Bearer token)
+        4. Extract cookies for additional auth context
+        5. Return raw token (no compression needed)
         """
-        from app.auth.token_compressor import compress_qwen_token
         from playwright.async_api import async_playwright
 
         async with async_playwright() as p:
@@ -261,15 +260,22 @@ class QwenAuth(ProviderAuth):
                 logger.debug("🔑 Qwen: Extracting localStorage token")
                 web_api_token = None
 
-                for attempt in range(3):
+                # Wait longer after login for token to be set
+                await asyncio.sleep(3)
+                
+                for attempt in range(10):
                     web_api_token = await page.evaluate('''() => {
-                        return localStorage.getItem('web_api_auth_token');
+                        // Try the actual token name used by Qwen
+                        return localStorage.getItem('token') 
+                            || localStorage.getItem('web_api_auth_token')
+                            || localStorage.getItem('access_token')
+                            || localStorage.getItem('auth_token');
                     }''')
                     if web_api_token:
                         logger.info(f"✅ Qwen: Found web_api_token on attempt {attempt + 1}")
                         break
-                    logger.debug(f"⏳ Qwen: Attempt {attempt + 1}/3 - waiting for token...")
-                    await asyncio.sleep(1)
+                    logger.debug(f"⏳ Qwen: Attempt {attempt + 1}/10 - waiting for token...")
+                    await asyncio.sleep(2)
 
                 # Extract cookies
                 logger.debug("🍪 Qwen: Extracting cookies")
@@ -285,27 +291,22 @@ class QwenAuth(ProviderAuth):
 
                 logger.info(f"📊 Qwen: web_api_token={bool(web_api_token)}, ssxmod_itna={bool(ssxmod_itna)}, total_cookies={len(cookie_dict)}")
 
-                # Create compressed Bearer token
+                # Use RAW token directly (as per Qwen API documentation)
+                # No compression needed - just use the localStorage 'token' value
                 bearer_token = None
-                if web_api_token and ssxmod_itna:
-                    try:
-                        logger.info("🗜️ Qwen: Compressing credentials into Bearer token")
-                        bearer_token = compress_qwen_token(web_api_token, ssxmod_itna)
-                        logger.info(f"✅ Qwen: Bearer token created ({len(bearer_token)} chars)")
-                    except Exception as e:
-                        logger.error(f"❌ Qwen: Failed to compress token: {e}", exc_info=True)
+                if web_api_token:
+                    bearer_token = web_api_token
+                    logger.info(f"✅ Qwen: Using raw Bearer token ({len(bearer_token)} chars)")
+                    logger.debug(f"🔑 Token format: {bearer_token[:20]}...{bearer_token[-20:]}")
                 else:
-                    logger.warning("⚠️ Qwen: Missing credentials for Bearer token")
-                    if not web_api_token:
-                        logger.error("❌ Qwen: web_api_auth_token not found in localStorage")
-                    if not ssxmod_itna:
-                        logger.error("❌ Qwen: ssxmod_itna cookie not found")
+                    logger.warning("⚠️ Qwen: Missing Bearer token")
+                    logger.error("❌ Qwen: 'token' not found in localStorage (checked: token, web_api_auth_token, access_token, auth_token)")
 
                 await browser.close()
 
                 # Success if we have bearer token
                 if not bearer_token:
-                    raise Exception("Failed to create Bearer token - missing credentials")
+                    raise Exception("Failed to extract Bearer token from localStorage")
 
                 return {
                     "cookies": cookie_dict,
@@ -313,7 +314,8 @@ class QwenAuth(ProviderAuth):
                     "extra": {
                         "method": "playwright",
                         "web_api_token_length": len(web_api_token) if web_api_token else 0,
-                        "cookie_count": len(cookie_dict)
+                        "cookie_count": len(cookie_dict),
+                        "ssxmod_itna": ssxmod_itna
                     }
                 }
 
@@ -344,3 +346,6 @@ def create_provider_auth(provider_name: str, config: Dict[str, str]) -> Provider
     else:
         raise ValueError(f"Unknown provider: {provider_name}")
 
+
+# Alias for backward compatibility
+create_auth = create_provider_auth

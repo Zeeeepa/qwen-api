@@ -40,6 +40,7 @@ dependencies = [
     "psutil>=7.0.0",
     "json-repair>=0.44.1",
     "rich>=13.7.0",
+    "PyJWT>=2.8.0",
 ]
 
 [project.optional-dependencies]
@@ -114,4 +115,3 @@ warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = false
 ignore_missing_imports = true
-

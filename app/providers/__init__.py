@@ -13,12 +13,14 @@ from app.providers.provider_factory import (
     initialize_providers,
 )
 from app.providers.qwen_provider import QwenProvider
+from app.providers.qwen_proxy_provider import QwenProxyProvider
 
 __all__ = [
     "BaseProvider",
     "ProviderConfig",
     "provider_registry",
     "QwenProvider",
+    "QwenProxyProvider",
     "ProviderFactory",
     "ProviderRouter",
     "get_provider_router",

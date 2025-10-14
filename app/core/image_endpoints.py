@@ -12,6 +12,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from app.core.config import settings
+from app.core.openai import validate_qwen_token
 from app.providers import get_provider_router
 from app.utils.logger import get_logger
 
@@ -60,18 +61,17 @@ async def generate_images(request: ImageGenerationRequest, authorization: str = 
     logger.info(f"🎨 Image generation request: '{request.prompt[:50]}...' size={request.size}")
 
     try:
-        # Validate auth
-        if not settings.SKIP_AUTH_TOKEN:
-            if not authorization.startswith("Bearer "):
-                raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+        # Validate Bearer token
+        if not authorization.startswith("Bearer "):
+            raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
 
-            api_key = authorization[7:]
-            if api_key != settings.AUTH_TOKEN:
-                raise HTTPException(status_code=401, detail="Invalid API key")
+        token = authorization[7:].strip()
+        if not validate_qwen_token(token):
+            raise HTTPException(status_code=401, detail="Invalid or expired Qwen token")
 
         # Get provider
         provider_router = get_provider_router()
-        provider = provider_router._get_provider_for_model(request.model or "qwen-max-image")
+        provider = provider_router.factory.get_provider_for_model(request.model or "qwen-max-image")
 
         if not provider:
             raise HTTPException(status_code=404, detail=f"Provider not found for model: {request.model}")
@@ -104,18 +104,17 @@ async def edit_images(request: ImageEditRequest, authorization: str = Header(...
     logger.info(f"🎨 Image edit request: '{request.prompt[:50]}...'")
 
     try:
-        # Validate auth
-        if not settings.SKIP_AUTH_TOKEN:
-            if not authorization.startswith("Bearer "):
-                raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+        # Validate Bearer token
+        if not authorization.startswith("Bearer "):
+            raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
 
-            api_key = authorization[7:]
-            if api_key != settings.AUTH_TOKEN:
-                raise HTTPException(status_code=401, detail="Invalid API key")
+        token = authorization[7:].strip()
+        if not validate_qwen_token(token):
+            raise HTTPException(status_code=401, detail="Invalid or expired Qwen token")
 
         # Get provider
         provider_router = get_provider_router()
-        provider = provider_router._get_provider_for_model(request.model or "qwen-max-image_edit")
+        provider = provider_router.factory.get_provider_for_model(request.model or "qwen-max-image_edit")
 
         if not provider:
             raise HTTPException(status_code=404, detail=f"Provider not found for model: {request.model}")
@@ -150,18 +149,17 @@ async def generate_videos(request: VideoGenerationRequest, authorization: str = 
     logger.info(f"🎬 Video generation request: '{request.prompt[:50]}...' duration={request.duration}s")
 
     try:
-        # Validate auth
-        if not settings.SKIP_AUTH_TOKEN:
-            if not authorization.startswith("Bearer "):
-                raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+        # Validate Bearer token
+        if not authorization.startswith("Bearer "):
+            raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
 
-            api_key = authorization[7:]
-            if api_key != settings.AUTH_TOKEN:
-                raise HTTPException(status_code=401, detail="Invalid API key")
+        token = authorization[7:].strip()
+        if not validate_qwen_token(token):
+            raise HTTPException(status_code=401, detail="Invalid or expired Qwen token")
 
         # Get provider
         provider_router = get_provider_router()
-        provider = provider_router._get_provider_for_model(request.model or "qwen-max-video")
+        provider = provider_router.factory.get_provider_for_model(request.model or "qwen-max-video")
 
         if not provider:
             raise HTTPException(status_code=404, detail=f"Provider not found for model: {request.model}")
@@ -201,18 +199,17 @@ async def deep_research(request: DeepResearchRequest, authorization: str = Heade
     logger.info(f"🔬 Deep research request: '{request.query[:50]}...' max_iterations={request.max_iterations}")
 
     try:
-        # Validate auth
-        if not settings.SKIP_AUTH_TOKEN:
-            if not authorization.startswith("Bearer "):
-                raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+        # Validate Bearer token
+        if not authorization.startswith("Bearer "):
+            raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
 
-            api_key = authorization[7:]
-            if api_key != settings.AUTH_TOKEN:
-                raise HTTPException(status_code=401, detail="Invalid API key")
+        token = authorization[7:].strip()
+        if not validate_qwen_token(token):
+            raise HTTPException(status_code=401, detail="Invalid or expired Qwen token")
 
         # Get provider
         provider_router = get_provider_router()
-        provider = provider_router._get_provider_for_model(request.model or "qwen-max-deep-research")
+        provider = provider_router.factory.get_provider_for_model(request.model or "qwen-max-deep-research")
 
         if not provider:
             raise HTTPException(status_code=404, detail=f"Provider not found for model: {request.model}")

@@ -192,6 +192,49 @@ Each worker gets **100,000 requests/day**, so 3 workers = **300,000 requests/day
 http://localhost:8080
 ```
 
+## 🔐 Authentication
+
+All API requests require a Bearer token containing your Qwen credentials.
+
+### Getting Your Qwen Token
+
+**Option 1: Use Temporary Test Token (Quick Start)**
+
+For testing purposes, use this temporary token:
+```
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjI3ZGUyYzVlLTYzZDYtNDU2MC1iNmQ3LTI2MDk0NDhjZmJmNiIsImxhc3RfcGFzc3dvcmRfY2hhbmdlIjoxNzU5ODg4MzE5LCJleHAiOjE3NjA3NDg4MTF9.NXiiJQMCmw4NCjBoyE_gADBOp8XOTGXWAAJgUjCSx7A
+```
+⚠️ **Expires**: 2025-10-18 00:53:31 UTC
+
+**Option 2: Get Your Own Token**
+
+1. Visit [chat.qwen.ai](https://chat.qwen.ai) and log in
+2. Open Developer Console (F12 → Console tab)
+3. Run this JavaScript code:
+```javascript
+javascript:(function(){if(window.location.hostname!=="chat.qwen.ai"){alert("🚀 This code is for chat.qwen.ai");window.open("https://chat.qwen.ai","_blank");return;}
+function getApiKeyData(){const token=localStorage.getItem("token");if(!token){alert("❌ qwen access_token not found !!!");return null;}
+return token;}
+async function copyToClipboard(text){try{await navigator.clipboard.writeText(text);return true;}catch(err){console.error("❌ Failed to copy to clipboard:",err);const textarea=document.createElement("textarea");textarea.value=text;textarea.style.position="fixed";textarea.style.opacity="0";document.body.appendChild(textarea);textarea.focus();textarea.select();const success=document.execCommand("copy");document.body.removeChild(textarea);return success;}}
+const apiKeyData=getApiKeyData();if(!apiKeyData)return;copyToClipboard(apiKeyData).then((success)=>{if(success){alert("🔑 Qwen access_token copied to clipboard !!! 🎉");}else{prompt("🔰 Qwen access_token:",apiKeyData);}});})();
+```
+4. Your token will be copied to clipboard
+5. Use it in your API requests
+
+### Using Authentication
+
+Include the Bearer token in all requests:
+```bash
+curl http://localhost:8080/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_QWEN_TOKEN" \
+  -d '{
+    "model": "qwen-turbo",
+    "messages": [{"role": "user", "content": "Hello!"}],
+    "stream": false
+  }'
+```
+
 ### Endpoints
 
 #### Chat Completions
@@ -200,6 +243,7 @@ POST /v1/chat/completions
 
 curl http://localhost:8080/v1/chat/completions \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_QWEN_TOKEN" \
   -d '{
     "model": "QWEN",
     "messages": [{"role": "user", "content": "Hello!"}],

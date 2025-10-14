@@ -2,6 +2,7 @@
 
 import json
 import time
+import jwt
 from typing import Any, Dict, List
 
 from fastapi import APIRouter, Header, HTTPException
@@ -36,6 +37,48 @@ def get_provider_router_instance():
     return provider_router
 
 
+def validate_qwen_token(token: str) -> bool:
+    """
+    Validate Qwen JWT token format and structure.
+    
+    Token format from qwen.aikit.club:
+    - JWT token with structure: {"id": "...", "last_password_change": ..., "exp": ...}
+    - Must not be expired
+    - Must have valid structure
+    
+    Args:
+        token: JWT token string from Bearer header
+        
+    Returns:
+        bool: True if token is valid, False otherwise
+    """
+    try:
+        # Decode JWT without verification (we're just checking format and expiry)
+        # Note: Qwen tokens are self-contained and don't need server-side verification
+        payload = jwt.decode(token, options={"verify_signature": False})
+        
+        # Check required fields exist
+        if "id" not in payload or "exp" not in payload:
+            logger.warning("🔑 Invalid token format: missing required fields")
+            return False
+            
+        # Check if token is expired
+        exp_timestamp = payload.get("exp")
+        if exp_timestamp and time.time() > exp_timestamp:
+            logger.warning("🔑 Token expired")
+            return False
+            
+        logger.debug(f"🔑 Valid Qwen token for user: {payload.get('id', 'unknown')[:8]}...")
+        return True
+        
+    except jwt.DecodeError:
+        logger.warning("🔑 Invalid JWT token format")
+        return False
+    except Exception as e:
+        logger.error(f"🔑 Token validation error: {e}")
+        return False
+
+
 def create_chunk(chat_id: str, model: str, delta: Dict[str, Any], finish_reason: str = None) -> Dict[str, Any]:
     """创建标准的 OpenAI chunk 结构"""
     return {
@@ -59,7 +102,7 @@ async def handle_non_stream_response(stream_response, request: OpenAIRequest) ->
 
     # 收集所有流式数据
     full_content = []
-    async for chunk_data in stream_response():
+    async for chunk_data in stream_response:
         if chunk_data.startswith("data: "):
             chunk_str = chunk_data[6:].strip()
             if chunk_str and chunk_str != "[DONE]":
@@ -129,14 +172,15 @@ async def chat_completions(request: OpenAIRequest, authorization: str = Header(.
     logger.info(f"😶‍🌫️ 收到客户端请求 - 模型: {request.model}, 流式: {request.stream}, 消息数: {len(request.messages)}, 角色: {role}, 工具数: {len(request.tools) if request.tools else 0}")
 
     try:
-        # Validate API key (skip if SKIP_AUTH_TOKEN is enabled)
-        if not settings.SKIP_AUTH_TOKEN:
-            if not authorization.startswith("Bearer "):
-                raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+        # Validate Bearer token
+        if not authorization.startswith("Bearer "):
+            raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
 
-            api_key = authorization[7:]
-            if api_key != settings.AUTH_TOKEN:
-                raise HTTPException(status_code=401, detail="Invalid API key")
+        token = authorization[7:].strip()
+        
+        # Validate Qwen JWT token
+        if not validate_qwen_token(token):
+            raise HTTPException(status_code=401, detail="Invalid or expired Qwen token")
 
         # 使用多提供商路由器处理请求
         router_instance = get_provider_router_instance()
@@ -274,3 +318,60 @@ async def update_token_pool_endpoint(tokens: List[str]):
     except Exception as e:
         logger.error(f"更新token池失败: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to update token pool: {str(e)}")
+
+
+@router.delete("/v1/chats/delete")
+@router.post("/v1/chats/delete")
+async def delete_all_chats(authorization: str = Header(...)):
+    """
+    Delete all chat history from Qwen
+    
+    Supports both DELETE and POST methods for compatibility.
+    Requires Bearer token authentication.
+    """
+    import httpx
+    
+    try:
+        # Validate authorization header
+        if not authorization.startswith("Bearer "):
+            raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+        
+        token = authorization[7:]  # Extract token after "Bearer "
+        
+        # Call Qwen's delete chats API
+        delete_url = "https://chat.qwen.ai/api/v2/chats"
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "Origin": "https://chat.qwen.ai",
+            "Referer": "https://chat.qwen.ai/chat"
+        }
+        
+        logger.info("🗑️ Deleting all chats from Qwen...")
+        
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.delete(delete_url, headers=headers)
+            
+            if response.status_code == 200:
+                data = response.json()
+                logger.info("✅ Chats deleted successfully")
+                return {
+                    "success": True,
+                    "message": "All chats deleted successfully",
+                    "data": data
+                }
+            else:
+                error_text = response.text
+                logger.error(f"❌ Failed to delete chats: {response.status_code} - {error_text}")
+                raise HTTPException(
+                    status_code=response.status_code,
+                    detail=f"Failed to delete chats: {error_text}"
+                )
+                
+    except httpx.HTTPError as e:
+        logger.error(f"❌ HTTP error during chat deletion: {e}")
+        raise HTTPException(status_code=500, detail=f"HTTP error: {str(e)}")
+    except Exception as e:
+        logger.error(f"❌ Error deleting chats: {e}")
+        raise HTTPException(status_code=500, detail=f"Error deleting chats: {str(e)}")
