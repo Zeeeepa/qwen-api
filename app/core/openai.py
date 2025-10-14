@@ -37,46 +37,20 @@ def get_provider_router_instance():
     return provider_router
 
 
-def validate_qwen_token(token: str) -> bool:
-    """
-    Validate Qwen JWT token format and structure.
-    
-    Token format from qwen.aikit.club:
-    - JWT token with structure: {"id": "...", "last_password_change": ..., "exp": ...}
-    - Must not be expired
-    - Must have valid structure
-    
-    Args:
-        token: JWT token string from Bearer header
-        
-    Returns:
-        bool: True if token is valid, False otherwise
-    """
-    try:
-        # Decode JWT without verification (we're just checking format and expiry)
-        # Note: Qwen tokens are self-contained and don't need server-side verification
-        payload = jwt.decode(token, options={"verify_signature": False})
-        
-        # Check required fields exist
-        if "id" not in payload or "exp" not in payload:
-            logger.warning("🔑 Invalid token format: missing required fields")
-            return False
-            
-        # Check if token is expired
-        exp_timestamp = payload.get("exp")
-        if exp_timestamp and time.time() > exp_timestamp:
-            logger.warning("🔑 Token expired")
-            return False
-            
-        logger.debug(f"🔑 Valid Qwen token for user: {payload.get('id', 'unknown')[:8]}...")
-        return True
-        
-    except jwt.DecodeError:
-        logger.warning("🔑 Invalid JWT token format")
-        return False
-    except Exception as e:
-        logger.error(f"🔑 Token validation error: {e}")
-        return False
+# NOTE: This function is no longer used. Client tokens are validated against
+# AUTH_TOKENS_FILE or skipped in ANONYMOUS_MODE. The QWEN_BEARER_TOKEN is
+# stored in environment and used internally by QwenProxyProvider.
+#
+# def validate_qwen_token(token: str) -> bool:
+#     """
+#     DEPRECATED: This was incorrectly validating client tokens as Qwen JWT tokens.
+#     
+#     The correct flow is:
+#     1. Client sends Bearer token (e.g., "sk-test")
+#     2. Server validates it against AUTH_TOKENS_FILE (or skips in ANONYMOUS_MODE)
+#     3. Server uses QWEN_BEARER_TOKEN from env for upstream Qwen API calls
+#     """
+#     pass
 
 
 def create_chunk(chat_id: str, model: str, delta: Dict[str, Any], finish_reason: str = None) -> Dict[str, Any]:
@@ -176,11 +150,13 @@ async def chat_completions(request: OpenAIRequest, authorization: str = Header(.
         if not authorization.startswith("Bearer "):
             raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
 
-        token = authorization[7:].strip()
-        
-        # Validate Qwen JWT token
-        if not validate_qwen_token(token):
-            raise HTTPException(status_code=401, detail="Invalid or expired Qwen token")
+        # In anonymous mode, accept any Bearer token
+        # Otherwise validate against configured auth tokens
+        if not settings.ANONYMOUS_MODE:
+            token = authorization[7:].strip()
+            # Validate client token (not Qwen token - that's internal)
+            if not settings.auth_token_list or token not in settings.auth_token_list:
+                raise HTTPException(status_code=401, detail="Invalid API key")
 
         # 使用多提供商路由器处理请求
         router_instance = get_provider_router_instance()
