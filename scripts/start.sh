@@ -1,408 +1,399 @@
 #!/usr/bin/env bash
 ################################################################################
-# start.sh - Qwen API Server Startup Script
-# Features:
-# - Environment validation
-# - Port conflict resolution
-# - Graceful startup with health checks
-# - PID management for clean shutdown
-# - Comprehensive logging
-# - Auto-restart on failure (optional)
+# start.sh - Start Qwen API Server
+#
+# This script starts the FastAPI server with proper configuration.
+# It validates the environment, checks authentication, and launches the server.
+#
+# Usage:
+#   bash scripts/start.sh [--port PORT] [--provider MODE]
+#
+# Options:
+#   --port PORT        Server port (default: 8096)
+#   --provider MODE    Provider mode: direct, proxy, auto (default: auto)
+#   --background       Run server in background
+#   --test             Test mode (don't actually start server)
 ################################################################################
 
-set -e
+set -euo pipefail
 
-# Colors for better UX
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-CYAN='\033[0;36m'
-MAGENTA='\033[0;35m'
-WHITE='\033[1;37m'
-BOLD='\033[1m'
-NC='\033[0m'
+# Color definitions
+readonly RED='\033[0;31m'
+readonly GREEN='\033[0;32m'
+readonly YELLOW='\033[1;33m'
+readonly BLUE='\033[0;34m'
+readonly CYAN='\033[0;36m'
+readonly MAGENTA='\033[0;35m'
+readonly WHITE='\033[1;37m'
+readonly BOLD='\033[1m'
+readonly NC='\033[0m'
 
 # Script configuration
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
-cd "$PROJECT_ROOT"
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+readonly ENV_FILE="${PROJECT_ROOT}/.env"
+readonly TOKEN_FILE="${PROJECT_ROOT}/.qwen_bearer_token"
+readonly PID_FILE="${PROJECT_ROOT}/.server.pid"
 
 # Default configuration
-DEFAULT_PORT=8096
-DEFAULT_HOST="0.0.0.0"
-MAX_STARTUP_ATTEMPTS=30
-STARTUP_WAIT_SECONDS=2
-HEALTH_CHECK_TIMEOUT=5
+PORT=8096
+PROVIDER_MODE="auto"
+BACKGROUND_MODE=false
+TEST_MODE=false
 
-# Logging functions
-log_info() { echo -e "${BLUE}[INFO]${NC} $1"; }
-log_success() { echo -e "${GREEN}[SUCCESS]${NC} $1"; }
-log_warning() { echo -e "${YELLOW}[WARNING]${NC} $1"; }
-log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
-log_step() { echo -e "${MAGENTA}[STEP $1]${NC} $2"; }
+cd "$PROJECT_ROOT"
 
-# Header
+################################################################################
+# Utility Functions
+################################################################################
+
+log_success() {
+    echo -e "${GREEN}✓${NC} $1"
+}
+
+log_error() {
+    echo -e "${RED}✗${NC} $1"
+}
+
+log_warning() {
+    echo -e "${YELLOW}⚠${NC} $1"
+}
+
+log_info() {
+    echo -e "${CYAN}ℹ${NC} $1"
+}
+
+log_step() {
+    echo ""
+    echo -e "${MAGENTA}${BOLD}$1${NC}"
+    echo -e "${MAGENTA}${BOLD}$(printf '=%.0s' {1..60})${NC}"
+}
+
 print_header() {
-    echo -e "${CYAN}${BOLD}"
-    echo "═══════════════════════════════════════════════════════════════════════════════"
-    echo "                   QWEN API SERVER - STARTUP MANAGER"
-    echo "═══════════════════════════════════════════════════════════════════════════════"
+    echo ""
+    echo -e "${MAGENTA}${BOLD}"
+    echo "╔══════════════════════════════════════════════════════╗"
+    echo "║                                                      ║"
+    echo "║         Qwen API - Server Startup Script            ║"
+    echo "║                                                      ║"
+    echo "╚══════════════════════════════════════════════════════╝"
     echo -e "${NC}"
 }
 
-# Footer
-print_footer() {
-    echo -e "${GREEN}${BOLD}"
-    echo "═══════════════════════════════════════════════════════════════════════════════"
-    echo "                     SERVER IS RUNNING SUCCESSFULLY! ✓"
-    echo "═══════════════════════════════════════════════════════════════════════════════"
-    echo -e "${NC}"
-}
+################################################################################
+# Argument Parsing
+################################################################################
 
-# Check if server is already running
-check_existing_server() {
-    log_step "1/7" "Checking for existing server instances..."
-    
-    local port=${1:-$DEFAULT_PORT}
-    
-    # Check by PID file
-    if [ -f "server.pid" ]; then
-        local pid=$(cat server.pid)
-        if ps -p "$pid" > /dev/null 2>&1; then
-            log_warning "Server already running with PID: $pid"
-            echo -e "${YELLOW}Would you like to stop it and start a new instance? (y/N):${NC}"
-            read -r response
-            if [[ $response =~ ^[Yy]$ ]]; then
-                kill "$pid" 2>/dev/null || true
-                sleep 2
-                rm -f server.pid
-                log_success "Stopped existing server"
-            else
-                log_info "Keeping existing server running"
-                exit 0
-            fi
-        else
-            rm -f server.pid
-            log_warning "Removed stale PID file"
-        fi
-    fi
-    
-    # Check by port
-    if lsof -Pi ":$port" -sTCP:LISTEN -t >/dev/null 2>&1; then
-        local port_pid=$(lsof -ti ":$port")
-        log_warning "Port $port is in use by process: $port_pid"
-        echo -e "${YELLOW}Would you like to kill the process and free the port? (y/N):${NC}"
-        read -r response
-        if [[ $response =~ ^[Yy]$ ]]; then
-            kill -9 "$port_pid" 2>/dev/null || true
-            sleep 2
-            log_success "Freed port $port"
-        else
-            log_error "Cannot start server - port $port is occupied"
-            exit 1
-        fi
-    fi
-    
-    log_success "No conflicting server instances found"
-}
-
-# Validate environment setup
-validate_environment() {
-    log_step "2/7" "Validating environment setup..."
-    
-    # Check virtual environment
-    if [ ! -d ".venv" ]; then
-        log_error "Virtual environment not found!"
-        echo -e "${YELLOW}Run 'bash scripts/setup.sh' first${NC}"
-        exit 1
-    fi
-    
-    # Check .env file
-    if [ ! -f ".env" ]; then
-        log_error ".env file not found!"
-        echo -e "${YELLOW}Run 'bash scripts/setup.sh' first${NC}"
-        exit 1
-    fi
-    
-    # Load environment variables
-    set -a
-    source .env
-    set +a
-    
-    # Validate Bearer token
-    if [ -z "$QWEN_BEARER_TOKEN" ] || [ "$QWEN_BEARER_TOKEN" = "your-bearer-token-here" ]; then
-        log_error "Bearer token not configured!"
-        echo -e "${YELLOW}Run 'bash scripts/setup.sh' to configure your token${NC}"
-        exit 1
-    fi
-    
-    log_success "Environment validation passed"
-    log_info "Bearer token: ${#QWEN_BEARER_TOKEN} characters"
-}
-
-# Parse command line arguments
 parse_arguments() {
-    local port=$DEFAULT_PORT
-    local host=$DEFAULT_HOST
-    local debug_mode=false
-    local auto_restart=false
-    
     while [[ $# -gt 0 ]]; do
         case $1 in
-            -p|--port)
-                port="$2"
+            --port)
+                PORT="$2"
                 shift 2
                 ;;
-            -h|--host)
-                host="$2"
+            --provider)
+                PROVIDER_MODE="$2"
                 shift 2
                 ;;
-            -d|--debug)
-                debug_mode=true
+            --background)
+                BACKGROUND_MODE=true
                 shift
                 ;;
-            -r|--restart)
-                auto_restart=true
+            --test)
+                TEST_MODE=true
                 shift
                 ;;
             *)
-                log_warning "Unknown option: $1"
-                shift
+                log_error "Unknown option: $1"
+                echo "Usage: $0 [--port PORT] [--provider MODE] [--background] [--test]"
+                exit 1
                 ;;
         esac
     done
-    
-    echo "$port $host $debug_mode $auto_restart"
 }
 
-# Setup logging directory
-setup_logging() {
-    log_step "3/7" "Setting up logging..."
-    
-    # Create logs directory
-    mkdir -p logs
-    
-    # Create log file with timestamp
-    local timestamp=$(date +%Y%m%d_%H%M%S)
-    local log_file="logs/server_${timestamp}.log"
-    
-    # Create symlink to latest log
-    ln -sf "$log_file" logs/server.log
-    
-    echo "$log_file"
-}
+################################################################################
+# Environment Validation
+################################################################################
 
-# Activate virtual environment
-activate_environment() {
-    log_step "4/7" "Activating Python environment..."
+validate_environment() {
+    log_step "Validating environment..."
     
-    source .venv/bin/activate
-    
-    # Verify Python environment
-    if ! python3 -c "import fastapi, uvicorn, dotenv" 2>/dev/null; then
-        log_error "Required Python packages not found!"
-        echo -e "${YELLOW}Run 'bash scripts/setup.sh' to install dependencies${NC}"
+    # Check if virtual environment exists
+    if [ ! -d ".venv" ]; then
+        log_error "Virtual environment not found!"
+        log_info "Please run: bash scripts/deploy.sh"
         exit 1
     fi
     
-    log_success "Python environment activated"
-}
-
-# Start server process
-start_server_process() {
-    local port="$1"
-    local host="$2"
-    local debug_mode="$3"
-    local log_file="$4"
+    # Activate virtual environment
+    source .venv/bin/activate
     
-    log_step "5/7" "Starting server process..."
-    
-    log_info "Starting server on: http://${host}:${port}"
-    log_info "Log file: $log_file"
-    
-    # Build command
-    local cmd="python3 main.py --port $port --host $host"
-    
-    if [ "$debug_mode" = "true" ]; then
-        cmd="$cmd --debug"
-        log_info "Debug mode enabled"
+    # Load environment variables
+    if [ -f "$ENV_FILE" ]; then
+        set -a
+        source "$ENV_FILE"
+        set +a
+        log_success "Environment variables loaded"
+    else
+        log_warning ".env file not found - using defaults"
     fi
     
-    # Start server with nohup
-    nohup $cmd > "$log_file" 2>&1 &
-    local server_pid=$!
+    # Check for required packages
+    if ! python -c "import fastapi" 2>/dev/null; then
+        log_error "FastAPI not installed!"
+        log_info "Please run: bash scripts/deploy.sh"
+        exit 1
+    fi
     
-    # Save PID
-    echo $server_pid > server.pid
-    
-    log_success "Server started with PID: $server_pid"
-    echo $server_pid
+    log_success "Environment validated"
 }
 
-# Wait for server to be ready
-wait_for_server_ready() {
-    local port="$1"
-    local host="$2"
-    local pid="$3"
+################################################################################
+# Authentication Check
+################################################################################
+
+check_authentication() {
+    log_step "Checking authentication..."
     
-    log_step "6/7" "Waiting for server to be ready..."
+    # Check for bearer token
+    if [ -f "$TOKEN_FILE" ]; then
+        TOKEN_LENGTH=$(wc -c < "$TOKEN_FILE" | tr -d ' ')
+        log_success "Bearer token found (${TOKEN_LENGTH} chars)"
+        
+        # Set token in environment
+        export QWEN_BEARER_TOKEN=$(cat "$TOKEN_FILE")
+        
+    elif [ -n "${QWEN_BEARER_TOKEN:-}" ]; then
+        log_success "Bearer token found in environment"
+        
+    elif [ -n "${QWEN_EMAIL:-}" ] && [ -n "${QWEN_PASSWORD:-}" ]; then
+        log_warning "No bearer token - will use Playwright authentication"
+        log_info "Email: ${QWEN_EMAIL}"
+        
+    else
+        log_error "No authentication method found!"
+        echo ""
+        log_info "Please either:"
+        log_info "  1. Run deploy.sh to extract token: bash scripts/deploy.sh"
+        log_info "  2. Set QWEN_BEARER_TOKEN environment variable"
+        log_info "  3. Set QWEN_EMAIL and QWEN_PASSWORD"
+        echo ""
+        exit 1
+    fi
+}
+
+################################################################################
+# Provider Configuration
+################################################################################
+
+configure_provider() {
+    log_step "Configuring provider..."
     
-    local attempt=1
-    local max_attempts=$MAX_STARTUP_ATTEMPTS
+    # Set provider mode
+    export QWEN_PROVIDER_MODE="$PROVIDER_MODE"
     
-    while [ $attempt -le $max_attempts ]; do
-        # Check if process is still running
-        if ! ps -p "$pid" > /dev/null 2>&1; then
-            log_error "Server process died unexpectedly!"
-            log_info "Check logs: tail -f logs/server.log"
+    case "$PROVIDER_MODE" in
+        direct)
+            log_info "Provider Mode: Direct (Browser Mimicry)"
+            log_info "  ✓ Uses QwenProvider"
+            log_info "  ✓ Direct Qwen API access"
+            log_info "  ✓ Full browser simulation"
+            ;;
+        proxy)
+            log_info "Provider Mode: Proxy (qwen.aikit.club)"
+            log_info "  ✓ Uses QwenProxyProvider"
+            log_info "  ✓ Fast proxy API"
+            log_info "  ✓ Simple HTTP requests"
+            ;;
+        auto)
+            log_info "Provider Mode: Auto (Intelligent Fallback)"
+            log_info "  ✓ Tries proxy first"
+            log_info "  ✓ Falls back to direct if needed"
+            log_info "  ✓ Best of both worlds"
+            ;;
+        *)
+            log_error "Invalid provider mode: $PROVIDER_MODE"
+            log_info "Valid modes: direct, proxy, auto"
+            exit 1
+            ;;
+    esac
+    
+    log_success "Provider configured: $PROVIDER_MODE"
+}
+
+################################################################################
+# Port Check
+################################################################################
+
+check_port() {
+    log_step "Checking port availability..."
+    
+    if lsof -Pi :$PORT -sTCP:LISTEN -t >/dev/null 2>&1 ; then
+        log_warning "Port $PORT is already in use"
+        
+        # Check if it's our server
+        if [ -f "$PID_FILE" ]; then
+            OLD_PID=$(cat "$PID_FILE")
+            if ps -p "$OLD_PID" > /dev/null 2>&1; then
+                log_info "Found existing server (PID: $OLD_PID)"
+                read -p "Kill existing server and restart? [y/N] " -n 1 -r
+                echo
+                if [[ $REPLY =~ ^[Yy]$ ]]; then
+                    log_info "Stopping existing server..."
+                    kill "$OLD_PID"
+                    sleep 2
+                    log_success "Existing server stopped"
+                else
+                    log_info "Keeping existing server running"
+                    exit 0
+                fi
+            fi
+        fi
+        
+        log_error "Port conflict - unable to start server"
+        log_info "Please either:"
+        log_info "  1. Stop the process using port $PORT"
+        log_info "  2. Use a different port: --port 8097"
+        exit 1
+    fi
+    
+    log_success "Port $PORT is available"
+}
+
+################################################################################
+# Health Check
+################################################################################
+
+perform_health_check() {
+    log_step "Performing health check..."
+    
+    # Quick Python import check
+    log_info "Testing imports..."
+    
+    python << 'PYTHON_CHECK'
+import sys
+try:
+    from app.providers.provider_factory import ProviderFactory
+    from app.core.config import settings
+    print("✓ All imports successful")
+except ImportError as e:
+    print(f"✗ Import error: {e}")
+    sys.exit(1)
+PYTHON_CHECK
+
+    if [ $? -eq 0 ]; then
+        log_success "Health check passed"
+    else
+        log_error "Health check failed"
+        exit 1
+    fi
+}
+
+################################################################################
+# Server Startup
+################################################################################
+
+start_server() {
+    log_step "Starting server..."
+    
+    # Set environment variables
+    export LISTEN_PORT=$PORT
+    export HOST=0.0.0.0
+    
+    log_info "Server Configuration:"
+    log_info "  Port: $PORT"
+    log_info "  Host: 0.0.0.0"
+    log_info "  Provider: $PROVIDER_MODE"
+    log_info "  Anonymous Mode: ${ANONYMOUS_MODE:-true}"
+    log_info "  Debug Logging: ${DEBUG_LOGGING:-true}"
+    echo ""
+    
+    if [ "$TEST_MODE" = true ]; then
+        log_warning "Test mode - not actually starting server"
+        return 0
+    fi
+    
+    # Start server
+    if [ "$BACKGROUND_MODE" = true ]; then
+        log_info "Starting server in background..."
+        
+        nohup python main.py > logs/server.log 2>&1 &
+        SERVER_PID=$!
+        
+        # Save PID
+        echo $SERVER_PID > "$PID_FILE"
+        
+        # Wait for server to start
+        log_info "Waiting for server to initialize..."
+        sleep 5
+        
+        # Check if server is running
+        if ps -p $SERVER_PID > /dev/null 2>&1; then
+            log_success "Server started successfully (PID: $SERVER_PID)"
+            log_info "Logs: tail -f logs/server.log"
+        else
+            log_error "Server failed to start"
+            log_info "Check logs: cat logs/server.log"
             exit 1
         fi
         
-        # Check health endpoint
-        if curl -s -f -m $HEALTH_CHECK_TIMEOUT "http://${host}:${port}/health" > /dev/null 2>&1; then
-            log_success "Server is ready and responding!"
-            return 0
-        fi
+    else
+        log_success "Starting server (Press Ctrl+C to stop)..."
+        echo ""
+        echo -e "${CYAN}Server URL:${NC} ${YELLOW}http://localhost:${PORT}${NC}"
+        echo -e "${CYAN}Health Check:${NC} ${YELLOW}http://localhost:${PORT}/health${NC}"
+        echo -e "${CYAN}OpenAI Endpoint:${NC} ${YELLOW}http://localhost:${PORT}/v1/chat/completions${NC}"
+        echo ""
         
-        # Check models endpoint as fallback
-        if curl -s -f -m $HEALTH_CHECK_TIMEOUT "http://${host}:${port}/v1/models" > /dev/null 2>&1; then
-            log_success "Server is ready (models endpoint responding)!"
-            return 0
-        fi
-        
-        if [ $attempt -eq $max_attempts ]; then
-            log_error "Server startup timeout after ${max_attempts} attempts"
-            log_info "Last logs:"
-            tail -20 logs/server.log
-            exit 1
-        fi
-        
-        echo -ne "${YELLOW}⏳ Waiting for server... (${attempt}/${max_attempts})\r${NC}"
-        sleep $STARTUP_WAIT_SECONDS
-        attempt=$((attempt + 1))
-    done
+        # Start server in foreground
+        python main.py
+    fi
 }
 
-# Verify server functionality
-verify_server_functionality() {
-    local port="$1"
-    local host="$2"
-    
-    log_step "7/7" "Verifying server functionality..."
-    
-    # Test health endpoint
-    log_info "Testing health endpoint..."
-    local health_response
-    health_response=$(curl -s -f "http://${host}:${port}/health" || echo "ERROR")
-    
-    if [ "$health_response" != "ERROR" ]; then
-        log_success "Health endpoint: $health_response"
-    else
-        log_warning "Health endpoint not responding as expected"
-    fi
-    
-    # Test models endpoint
-    log_info "Testing models endpoint..."
-    if curl -s -f "http://${host}:${port}/v1/models" > /dev/null 2>&1; then
-        log_success "Models endpoint responding"
-    else
-        log_warning "Models endpoint not available"
-    fi
-    
-    # Test chat completion endpoint (basic check)
-    log_info "Testing API availability..."
-    if curl -s -f -H "Content-Type: application/json" \
-         "http://${host}:${port}/v1/chat/completions" > /dev/null 2>&1; then
-        log_success "Chat completions endpoint available"
-    else
-        log_warning "Chat completions endpoint not ready yet"
-    fi
-    
-    log_success "Server verification completed"
-}
+################################################################################
+# Cleanup
+################################################################################
 
-# Display server information
-display_server_info() {
-    local port="$1"
-    local host="$2"
-    local pid="$3"
-    
-    echo ""
-    echo -e "${CYAN}${BOLD}Server Information:${NC}"
-    echo -e "  ${WHITE}📍 Local URL:${NC}    http://localhost:${port}"
-    echo -e "  ${WHITE}🌐 Network URL:${NC}  http://${host}:${port}"
-    echo -e "  ${WHITE}🔧 Process ID:${NC}   $pid"
-    echo -e "  ${WHITE}📊 Health Check:${NC} http://localhost:${port}/health"
-    echo -e "  ${WHITE}🤖 Models API:${NC}   http://localhost:${port}/v1/models"
-    echo -e "  ${WHITE}📝 Log File:${NC}     logs/server.log"
-    echo ""
-    
-    echo -e "${CYAN}${BOLD}Management Commands:${NC}"
-    echo -e "  ${GREEN}View logs:${NC}        ${BOLD}tail -f logs/server.log${NC}"
-    echo -e "  ${GREEN}Stop server:${NC}      ${BOLD}kill \\\$(cat server.pid)${NC}"
-    echo -e "  ${GREEN}Quick test:${NC}       ${BOLD}bash scripts/send_request.sh${NC}"
-    echo -e "  ${GREEN}Restart server:${NC}   ${BOLD}bash scripts/start.sh${NC}"
-    echo ""
-}
-
-# Cleanup function for signal handling
 cleanup() {
-    log_info "Shutting down server..."
-    
-    if [ -f "server.pid" ]; then
-        local pid=$(cat server.pid)
-        if ps -p "$pid" > /dev/null 2>&1; then
-            kill "$pid" 2>/dev/null || true
-            sleep 2
+    if [ -f "$PID_FILE" ]; then
+        PID=$(cat "$PID_FILE")
+        if ps -p "$PID" > /dev/null 2>&1; then
+            log_info "Stopping server (PID: $PID)..."
+            kill "$PID"
+            rm "$PID_FILE"
         fi
-        rm -f server.pid
     fi
-    
-    log_success "Cleanup completed"
-    exit 0
 }
 
-# Set up signal handlers
-setup_signal_handlers() {
-    trap cleanup SIGINT SIGTERM EXIT
-}
+trap cleanup EXIT INT TERM
 
-# Main execution
+################################################################################
+# Main Flow
+################################################################################
+
 main() {
     print_header
     
-    # Parse arguments
-    read -r port host debug_mode auto_restart <<< "$(parse_arguments "$@")"
-    
-    log_info "Configuration: Port=$port, Host=$host, Debug=$debug_mode"
-    
-    # Execute startup sequence
-    check_existing_server "$port"
+    parse_arguments "$@"
     validate_environment
-    setup_signal_handlers
-    local log_file=$(setup_logging)
-    activate_environment
-    local server_pid=$(start_server_process "$port" "$host" "$debug_mode" "$log_file")
-    wait_for_server_ready "$port" "$host" "$server_pid"
-    verify_server_functionality "$port" "$host"
+    check_authentication
+    configure_provider
+    check_port
+    perform_health_check
+    start_server
     
-    print_footer
-    display_server_info "$port" "$host" "$server_pid"
-    
-    # Show initial logs
-    echo -e "${CYAN}${BOLD}Initial Server Output:${NC}"
-    echo -e "${CYAN}───────────────────────────────────────────────────────────────────────────────${NC}"
-    tail -10 "$log_file"
-    echo -e "${CYAN}───────────────────────────────────────────────────────────────────────────────${NC}"
-    echo ""
-    echo -e "${YELLOW}Server is running. Press Ctrl+C to stop.${NC}"
-    
-    # Wait for user interruption or process exit
-    wait "$server_pid" 2>/dev/null || true
+    if [ "$BACKGROUND_MODE" = true ]; then
+        echo ""
+        echo -e "${GREEN}${BOLD}✅ Server is running!${NC}"
+        echo ""
+        echo -e "${CYAN}Server URL:${NC} ${YELLOW}http://localhost:${PORT}${NC}"
+        echo -e "${CYAN}PID File:${NC} ${YELLOW}${PID_FILE}${NC}"
+        echo -e "${CYAN}Stop Server:${NC} ${YELLOW}kill \$(cat ${PID_FILE})${NC}"
+        echo ""
+    fi
 }
 
-# Run main function if script is executed directly
-if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
-    main "$@"
-fi
+# Run main
+main "$@"
+

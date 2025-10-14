@@ -1,12 +1,23 @@
 #!/usr/bin/env bash
 ################################################################################
-# all.sh - Complete End-to-End Deployment and Testing
+# all.sh - Complete Qwen API Deployment & Testing
 #
-# This script orchestrates:
-# 1. Environment setup (setup.sh)
-# 2. Server startup (start.sh)
-# 3. Comprehensive testing (send_request.sh)
-# 4. Log monitoring
+# This is the master orchestration script that runs the complete workflow:
+# 1. Deploy (install dependencies, extract token)
+# 2. Start server in background
+# 3. Test OpenAI API requests
+# 4. Keep server running with visible test results
+#
+# Usage:
+#   export QWEN_EMAIL=your-email@example.com
+#   export QWEN_PASSWORD=your-password
+#   bash scripts/all.sh
+#
+# Options:
+#   --port PORT        Server port (default: 8096)
+#   --provider MODE    Provider mode: direct, proxy, auto (default: auto)
+#   --skip-deploy      Skip deployment step
+#   --no-test          Skip testing step
 ################################################################################
 
 set -euo pipefail
@@ -18,15 +29,20 @@ readonly YELLOW='\033[1;33m'
 readonly BLUE='\033[0;34m'
 readonly CYAN='\033[0;36m'
 readonly MAGENTA='\033[0;35m'
+readonly WHITE='\033[1;37m'
 readonly BOLD='\033[1m'
 readonly NC='\033[0m'
 
-# Project paths
+# Script configuration
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
-readonly PID_FILE="${PROJECT_ROOT}/server.pid"
-readonly ENV_FILE="${PROJECT_ROOT}/.env"
-readonly LOGS_DIR="${PROJECT_ROOT}/logs"
+
+# Default configuration
+PORT=8096
+PROVIDER_MODE="auto"
+SKIP_DEPLOY=false
+NO_TEST=false
+SERVER_PID=""
 
 cd "$PROJECT_ROOT"
 
@@ -38,420 +54,404 @@ log_success() {
     echo -e "${GREEN}✓${NC} $1"
 }
 
-log_warning() {
-    echo -e "${YELLOW}⚠${NC} $1"
-}
-
 log_error() {
     echo -e "${RED}✗${NC} $1"
 }
 
+log_warning() {
+    echo -e "${YELLOW}⚠${NC} $1"
+}
+
 log_info() {
-    echo -e "${CYAN}$1${NC}"
+    echo -e "${CYAN}ℹ${NC} $1"
 }
 
-print_header() {
+log_step() {
+    echo ""
+    echo -e "${MAGENTA}${BOLD}╔══════════════════════════════════════════════════════╗${NC}"
+    echo -e "${MAGENTA}${BOLD}║  $1${NC}"
+    echo -e "${MAGENTA}${BOLD}╚══════════════════════════════════════════════════════╝${NC}"
+    echo ""
+}
+
+print_banner() {
+    clear
     echo -e "${MAGENTA}${BOLD}"
-    echo "╔══════════════════════════════════════════════════════╗"
-    echo "║                                                      ║"
-    echo "║        🚀 Qwen API - Complete Deployment 🚀         ║"
-    echo "║                                                      ║"
-    echo "║  This script will:                                   ║"
-    echo "║  1. ✅ Setup Python environment                     ║"
-    echo "║  2. 📦 Install all dependencies                     ║"
-    echo "║  3. 🌐 Install Playwright browsers                  ║"
-    echo "║  4. 🔑 Retrieve/validate Bearer token               ║"
-    echo "║  5. 🚀 Start the API server                         ║"
-    echo "║  6. 🧪 Run comprehensive tests                      ║"
-    echo "║  7. 📊 Display results                              ║"
-    echo "║  8. 🔄 Keep server running                          ║"
-    echo "║                                                      ║"
-    echo "╚══════════════════════════════════════════════════════╝"
-    echo -e "${NC}\n"
-}
-
-print_step_header() {
-    local step=$1
-    local title=$2
-    
-    echo -e "${CYAN}${BOLD}─────────────────────────────────────────────────────${NC}"
-    echo -e "${CYAN}${BOLD}STEP $step/3: $title${NC}"
-    echo -e "${CYAN}${BOLD}─────────────────────────────────────────────────────${NC}\n"
-}
-
-print_footer() {
-    echo -e "${MAGENTA}${BOLD}"
-    echo "╔══════════════════════════════════════════════════════╗"
-    echo "║                                                      ║"
-    echo "║            🎉 Deployment Complete! 🎉               ║"
-    echo "║                                                      ║"
-    echo "╚══════════════════════════════════════════════════════╝"
-    echo -e "${NC}\n"
-}
-
-cleanup_on_exit() {
-    local exit_code=$?
-    if [[ $exit_code -ne 0 ]]; then
-        log_error "Deployment failed with exit code $exit_code"
-        
-        # Show last 20 lines of log if available
-        if [[ -f "$LOGS_DIR/server.log" ]]; then
-            echo -e "\n${YELLOW}Last 20 lines of server log:${NC}"
-            echo -e "${CYAN}════════════════════════════════════════════════════${NC}"
-            tail -20 "$LOGS_DIR/server.log"
-            echo -e "${CYAN}════════════════════════════════════════════════════${NC}\n"
-        fi
-    fi
-}
-
-trap cleanup_on_exit EXIT
-
-################################################################################
-# Validation Functions
-################################################################################
-
-check_project_root() {
-    if [[ ! -f "main.py" ]]; then
-        log_error "main.py not found!"
-        log_warning "Please run this script from the project root directory"
-        echo ""
-        exit 1
-    fi
-}
-
-check_script_exists() {
-    local script_name=$1
-    local script_path="${SCRIPT_DIR}/${script_name}"
-    
-    if [[ ! -f "$script_path" ]]; then
-        log_error "$script_name not found at $script_path"
-        echo ""
-        exit 1
-    fi
-    
-    # Make script executable
-    chmod +x "$script_path"
-}
-
-check_dependencies() {
-    local missing_deps=()
-    
-    # Check for basic dependencies
-    for dep in curl jq; do
-        if ! command -v "$dep" &> /dev/null; then
-            missing_deps+=("$dep")
-        fi
-    done
-    
-    if [ ${#missing_deps[@]} -ne 0 ]; then
-        log_error "Missing dependencies: ${missing_deps[*]}"
-        log_info "Please install them first:"
-        for dep in "${missing_deps[@]}"; do
-            case $dep in
-                "jq")
-                    echo "  Ubuntu/Debian: sudo apt-get install jq"
-                    echo "  macOS: brew install jq"
-                    ;;
-                "curl")
-                    echo "  Ubuntu/Debian: sudo apt-get install curl"
-                    echo "  macOS: brew install curl"
-                    ;;
-            esac
-        done
-        exit 1
-    fi
+    cat << 'EOF'
+    ╔═══════════════════════════════════════════════════════════╗
+    ║                                                           ║
+    ║   ██████╗ ██╗    ██╗███████╗███╗   ██╗     █████╗ ██████╗██║
+    ║  ██╔═══██╗██║    ██║██╔════╝████╗  ██║    ██╔══██╗██╔══██╗██║
+    ║  ██║   ██║██║ █╗ ██║█████╗  ██╔██╗ ██║    ███████║██████╔╝██║
+    ║  ██║▄▄ ██║██║███╗██║██╔══╝  ██║╚██╗██║    ██╔══██║██╔═══╝ ██║
+    ║  ╚██████╔╝╚███╔███╔╝███████╗██║ ╚████║    ██║  ██║██║     ██║
+    ║   ╚══▀▀═╝  ╚══╝╚══╝ ╚══════╝╚═╝  ╚═══╝    ╚═╝  ╚═╝╚═╝     ╚═╝
+    ║                                                           ║
+    ║            Complete Deployment & Testing Suite            ║
+    ║                                                           ║
+    ╚═══════════════════════════════════════════════════════════╝
+EOF
+    echo -e "${NC}"
 }
 
 ################################################################################
-# Process Management
+# Argument Parsing
 ################################################################################
 
-kill_existing_server() {
-    local port
-    
-    # Load port from env if available
-    if [[ -f "$ENV_FILE" ]]; then
-        # shellcheck source=/dev/null
-        set -a
-        source "$ENV_FILE"
-        set +a
-    fi
-    
-    port="${LISTEN_PORT:-8096}"
-    
-    # Kill by PID file (safe method)
-    if [[ -f "$PID_FILE" ]]; then
-        local old_pid
-        old_pid=$(cat "$PID_FILE")
-        
-        if ps -p "$old_pid" > /dev/null 2>&1; then
-            log_warning "Stopping existing server (PID: $old_pid)"
-            kill "$old_pid" 2>/dev/null || true
-            sleep 3
-            
-            # Force kill if still running
-            if ps -p "$old_pid" > /dev/null 2>&1; then
-                log_warning "Server didn't stop gracefully, forcing..."
-                kill -9 "$old_pid" 2>/dev/null || true
-                sleep 2
-            fi
-        fi
-        
-        rm -f "$PID_FILE"
-        log_success "Stopped existing server"
-    fi
-    
-    # Check if port is still in use (could be different process)
-    if lsof -Pi ":$port" -sTCP:LISTEN -t >/dev/null 2>&1; then
-        local port_pid
-        port_pid=$(lsof -ti ":$port")
-        
-        # Only kill if it's our known server process
-        if [[ -n "$port_pid" ]]; then
-            log_warning "Port $port is still in use by process $port_pid"
-            echo -e "${YELLOW}Kill this process? (y/N):${NC}"
-            read -r response
-            if [[ $response =~ ^[Yy]$ ]]; then
-                kill -9 "$port_pid" 2>/dev/null || true
-                sleep 2
-                log_success "Freed port $port"
-            else
-                log_error "Cannot start server - port $port is occupied"
+parse_arguments() {
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --port)
+                PORT="$2"
+                shift 2
+                ;;
+            --provider)
+                PROVIDER_MODE="$2"
+                shift 2
+                ;;
+            --skip-deploy)
+                SKIP_DEPLOY=true
+                shift
+                ;;
+            --no-test)
+                NO_TEST=true
+                shift
+                ;;
+            *)
+                log_error "Unknown option: $1"
+                echo "Usage: $0 [--port PORT] [--provider MODE] [--skip-deploy] [--no-test]"
                 exit 1
-            fi
+                ;;
+        esac
+    done
+}
+
+################################################################################
+# Cleanup Handler
+################################################################################
+
+cleanup() {
+    echo ""
+    log_info "Shutting down..."
+    
+    if [ -n "$SERVER_PID" ] && ps -p "$SERVER_PID" > /dev/null 2>&1; then
+        log_info "Stopping server (PID: $SERVER_PID)..."
+        kill "$SERVER_PID" 2>/dev/null || true
+        
+        # Wait for graceful shutdown
+        local count=0
+        while ps -p "$SERVER_PID" > /dev/null 2>&1 && [ $count -lt 10 ]; do
+            sleep 1
+            ((count++))
+        done
+        
+        # Force kill if still running
+        if ps -p "$SERVER_PID" > /dev/null 2>&1; then
+            log_warning "Force killing server..."
+            kill -9 "$SERVER_PID" 2>/dev/null || true
+        fi
+        
+        log_success "Server stopped"
+    fi
+    
+    # Clean up PID file
+    rm -f .server.pid
+    
+    echo ""
+    log_info "Cleanup complete"
+}
+
+trap cleanup EXIT INT TERM
+
+################################################################################
+# Step 1: Deployment
+################################################################################
+
+run_deployment() {
+    log_step "STEP 1/4: DEPLOYMENT"
+    
+    if [ "$SKIP_DEPLOY" = true ]; then
+        log_warning "Skipping deployment (--skip-deploy flag)"
+        return 0
+    fi
+    
+    # Check if already deployed
+    if [ -f ".venv/bin/activate" ] && [ -f ".qwen_bearer_token" ]; then
+        log_info "Existing installation detected"
+        read -p "Skip deployment? [Y/n] " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]] || [[ -z $REPLY ]]; then
+            log_info "Using existing installation"
+            return 0
         fi
     fi
+    
+    log_info "Running deployment script..."
+    bash "${SCRIPT_DIR}/deploy.sh"
+    
+    if [ $? -eq 0 ]; then
+        log_success "Deployment completed successfully"
+    else
+        log_error "Deployment failed"
+        exit 1
+    fi
 }
 
 ################################################################################
-# Deployment Steps
+# Step 2: Start Server
 ################################################################################
 
-run_setup() {
-    print_step_header "1" "Running Environment Setup"
+start_server() {
+    log_step "STEP 2/4: START SERVER"
     
-    check_script_exists "setup.sh"
-    
-    log_info "Starting comprehensive setup..."
-    if bash "${SCRIPT_DIR}/setup.sh"; then
-        log_success "Setup completed successfully!"
-    else
-        log_error "Setup failed!"
-        exit 1
-    fi
-    
+    log_info "Starting server in background..."
+    log_info "Port: $PORT"
+    log_info "Provider: $PROVIDER_MODE"
     echo ""
-    sleep 2
-}
-
-run_server_start() {
-    print_step_header "2" "Starting API Server"
     
-    # Clean up any existing servers first
-    kill_existing_server
+    # Start server in background
+    bash "${SCRIPT_DIR}/start.sh" --port "$PORT" --provider "$PROVIDER_MODE" --background
     
-    check_script_exists "start.sh"
-    
-    log_info "Starting server..."
-    if bash "${SCRIPT_DIR}/start.sh"; then
-        log_success "Server started successfully!"
-    else
-        log_error "Server startup failed!"
-        exit 1
-    fi
-    
-    echo ""
-    sleep 3
-}
-
-run_tests() {
-    print_step_header "3" "Running API Tests"
-    
-    check_script_exists "send_request.sh"
-    
-    local test_result=0
-    log_info "Executing comprehensive API tests..."
-    if bash "${SCRIPT_DIR}/send_request.sh"; then
-        log_success "All tests passed!"
-    else
-        test_result=$?
-        if [[ $test_result -eq 0 ]]; then
-            log_success "Tests completed"
+    if [ $? -eq 0 ]; then
+        # Get server PID
+        if [ -f ".server.pid" ]; then
+            SERVER_PID=$(cat .server.pid)
+            log_success "Server started (PID: $SERVER_PID)"
         else
-            log_warning "Some tests failed (exit code: $test_result)"
+            log_error "Server PID file not found"
+            exit 1
         fi
+        
+        # Wait for server to be ready
+        log_info "Waiting for server to initialize..."
+        
+        local max_attempts=30
+        local attempt=0
+        local server_ready=false
+        
+        while [ $attempt -lt $max_attempts ]; do
+            if curl -s -f "http://localhost:${PORT}/health" > /dev/null 2>&1; then
+                server_ready=true
+                break
+            fi
+            
+            sleep 1
+            ((attempt++))
+            echo -n "."
+        done
+        
+        echo ""
+        
+        if [ "$server_ready" = true ]; then
+            log_success "Server is ready!"
+            
+            # Display server info
+            echo ""
+            log_info "Server Information:"
+            echo -e "  ${CYAN}URL:${NC} ${YELLOW}http://localhost:${PORT}${NC}"
+            echo -e "  ${CYAN}Health:${NC} ${YELLOW}http://localhost:${PORT}/health${NC}"
+            echo -e "  ${CYAN}Docs:${NC} ${YELLOW}http://localhost:${PORT}/docs${NC}"
+            echo -e "  ${CYAN}PID:${NC} ${YELLOW}${SERVER_PID}${NC}"
+            echo -e "  ${CYAN}Logs:${NC} ${YELLOW}tail -f logs/server.log${NC}"
+            
+        else
+            log_error "Server failed to start within 30 seconds"
+            log_info "Check logs: cat logs/server.log"
+            exit 1
+        fi
+        
+    else
+        log_error "Failed to start server"
+        exit 1
+    fi
+}
+
+################################################################################
+# Step 3: Test API
+################################################################################
+
+test_api() {
+    log_step "STEP 3/4: TEST API"
+    
+    if [ "$NO_TEST" = true ]; then
+        log_warning "Skipping tests (--no-test flag)"
+        return 0
     fi
     
-    return $test_result
-}
-
-################################################################################
-# Information Display
-################################################################################
-
-load_config() {
-    if [[ -f "$ENV_FILE" ]]; then
-        # shellcheck source=/dev/null
-        set -a
-        source "$ENV_FILE"
-        set +a
+    log_info "Running OpenAI API compatibility tests..."
+    echo ""
+    
+    # Run basic test
+    bash "${SCRIPT_DIR}/send_openai_request.sh" --port "$PORT" --verbose
+    
+    if [ $? -eq 0 ]; then
+        log_success "API test passed!"
+    else
+        log_error "API test failed"
+        return 1
     fi
 }
 
-print_server_info() {
-    local port="${LISTEN_PORT:-8096}"
+################################################################################
+# Step 4: Run Continuous Test
+################################################################################
+
+run_continuous_test() {
+    log_step "STEP 4/4: CONTINUOUS TESTING"
+    
+    log_info "Running continuous tests (Press Ctrl+C to stop)..."
+    echo ""
+    
+    local test_count=0
+    local success_count=0
+    local failure_count=0
+    
+    while true; do
+        ((test_count++))
+        
+        echo ""
+        echo -e "${BLUE}${BOLD}═══════════════════════════════════════════════════════${NC}"
+        echo -e "${BLUE}${BOLD}  Test #${test_count} - $(date '+%Y-%m-%d %H:%M:%S')${NC}"
+        echo -e "${BLUE}${BOLD}═══════════════════════════════════════════════════════${NC}"
+        echo ""
+        
+        # Send test request
+        if bash "${SCRIPT_DIR}/send_openai_request.sh" --port "$PORT" > /tmp/test_output.txt 2>&1; then
+            ((success_count++))
+            log_success "Test passed (Success: $success_count, Failed: $failure_count)"
+            
+            # Display response
+            cat /tmp/test_output.txt | tail -20
+        else
+            ((failure_count++))
+            log_error "Test failed (Success: $success_count, Failed: $failure_count)"
+            cat /tmp/test_output.txt | tail -20
+        fi
+        
+        # Show stats
+        echo ""
+        echo -e "${CYAN}Statistics:${NC}"
+        echo -e "  Total Tests: $test_count"
+        echo -e "  Success Rate: $(awk "BEGIN {printf \"%.1f\", ($success_count/$test_count)*100}")%"
+        
+        # Wait before next test
+        log_info "Waiting 30 seconds before next test..."
+        sleep 30
+    done
+}
+
+################################################################################
+# Summary Display
+################################################################################
+
+display_summary() {
+    echo ""
+    echo -e "${GREEN}${BOLD}"
+    echo "╔═══════════════════════════════════════════════════════╗"
+    echo "║                                                       ║"
+    echo "║           ✅ DEPLOYMENT SUCCESSFUL!                   ║"
+    echo "║                                                       ║"
+    echo "╚═══════════════════════════════════════════════════════╝"
+    echo -e "${NC}"
+    echo ""
     
     echo -e "${CYAN}${BOLD}Server Information:${NC}"
-    echo -e "  ${BLUE}📍 Local URL:${NC}    http://localhost:$port"
-    echo -e "  ${BLUE}🌐 Health Check:${NC} http://localhost:$port/health"
-    echo -e "  ${BLUE}🤖 Models API:${NC}   http://localhost:$port/v1/models"
-    echo -e "  ${BLUE}📊 Logs:${NC}         $LOGS_DIR/server.log"
-    
-    if [[ -f "$PID_FILE" ]]; then
-        echo -e "  ${BLUE}🔧 Process ID:${NC}   $(cat "$PID_FILE")"
-    fi
+    echo -e "  🌐 URL: ${YELLOW}http://localhost:${PORT}${NC}"
+    echo -e "  🏥 Health: ${YELLOW}http://localhost:${PORT}/health${NC}"
+    echo -e "  📚 Docs: ${YELLOW}http://localhost:${PORT}/docs${NC}"
+    echo -e "  🔧 Provider: ${YELLOW}${PROVIDER_MODE}${NC}"
     echo ""
-}
-
-print_useful_commands() {
-    local port="${LISTEN_PORT:-8096}"
     
     echo -e "${CYAN}${BOLD}Useful Commands:${NC}"
-    echo -e "  ${YELLOW}📋 View logs:${NC}        ${BOLD}tail -f logs/server.log${NC}"
-    echo -e "  ${YELLOW}🛑 Stop server:${NC}      ${BOLD}kill \\\$(cat server.pid)${NC}"
-    echo -e "  ${YELLOW}🧪 Run tests:${NC}        ${BOLD}bash scripts/send_request.sh${NC}"
-    echo -e "  ${YELLOW}🔁 Restart server:${NC}   ${BOLD}bash scripts/start.sh${NC}"
-    echo ""
-}
-
-print_api_examples() {
-    local port="${LISTEN_PORT:-8096}"
-    
-    echo -e "${CYAN}${BOLD}Example API Usage:${NC}"
-    
-    echo -e "${BLUE}Python Example:${NC}"
-    cat << 'PYTHON_EOF'
-import openai
-
-client = openai.OpenAI(
-    base_url="http://localhost:8096/v1",
-    api_key="sk-test"  # or use your QWEN_BEARER_TOKEN
-)
-
-response = client.chat.completions.create(
-    model="qwen-turbo",
-    messages=[{"role": "user", "content": "Hello! Explain quantum computing."}],
-    stream=False
-)
-
-print(response.choices[0].message.content)
-PYTHON_EOF
-
+    echo -e "  View logs: ${YELLOW}tail -f logs/server.log${NC}"
+    echo -e "  Stop server: ${YELLOW}kill \$(cat .server.pid)${NC}"
+    echo -e "  Test API: ${YELLOW}bash scripts/send_openai_request.sh${NC}"
+    echo -e "  Restart: ${YELLOW}bash scripts/all.sh${NC}"
     echo ""
     
-    echo -e "${BLUE}cURL Example:${NC}"
-    echo "curl -X POST http://localhost:$port/v1/chat/completions \\"
-    echo "  -H 'Content-Type: application/json' \\"
-    echo "  -H 'Authorization: Bearer sk-test' \\"
-    echo "  -d '{
-    \"model\": \"qwen-turbo\",
-    \"messages\": [{\"role\": \"user\", \"content\": \"Hello!\"}],
-    \"stream\": false
-}'"
-    echo ""
-}
-
-watch_logs() {
-    echo -e "${CYAN}${BOLD}Server is running in background...${NC}"
-    echo -e "${YELLOW}Press Ctrl+C to stop watching logs (server will keep running)${NC}"
-    echo -e "${YELLOW}To stop server: kill \\\$(cat server.pid)${NC}\n"
-    
-    echo -e "${CYAN}${BOLD}Streaming logs (Ctrl+C to exit):${NC}"
-    echo -e "${CYAN}════════════════════════════════════════════════════${NC}\n"
-    
-    # Trap Ctrl+C gracefully
-    trap 'echo -e "\n${YELLOW}Stopped watching logs. Server still running.${NC}\n"; exit 0' INT
-    
-    if [[ -f "$LOGS_DIR/server.log" ]]; then
-        tail -f "$LOGS_DIR/server.log"
-    else
-        log_warning "Log file not found: $LOGS_DIR/server.log"
-        echo -e "${YELLOW}Waiting for logs to appear...${NC}"
-        sleep 5
-        if [[ -f "$LOGS_DIR/server.log" ]]; then
-            tail -f "$LOGS_DIR/server.log"
-        else
-            log_error "Log file still not found after waiting"
-        fi
-    fi
-}
-
-handle_test_failure() {
-    echo -e "${YELLOW}${BOLD}⚠ Some tests failed. Check the logs for details.${NC}"
-    echo -e "${BLUE}Logs location:${NC} $LOGS_DIR/server.log\n"
-    
-    echo -e "${CYAN}Server is still running. You can:${NC}"
-    echo -e "  ${YELLOW}→${NC} Check logs: tail -f logs/server.log"
-    echo -e "  ${YELLOW}→${NC} Run tests manually: bash scripts/send_request.sh"
-    echo -e "  ${YELLOW}→${NC} Stop server: kill \\\$(cat server.pid)"
-    echo -e "  ${YELLOW}→${NC} Restart: bash scripts/start.sh"
+    echo -e "${CYAN}${BOLD}Example API Call:${NC}"
+    cat << 'EOF'
+curl -X POST http://localhost:8096/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "qwen-max-latest",
+    "messages": [{"role": "user", "content": "Hello!"}]
+  }'
+EOF
     echo ""
 }
 
 ################################################################################
-# Main Execution
+# Interactive Mode
+################################################################################
+
+interactive_mode() {
+    log_step "INTERACTIVE OPTIONS"
+    
+    echo -e "${CYAN}What would you like to do?${NC}"
+    echo ""
+    echo "  1) Run continuous tests (every 30s)"
+    echo "  2) Keep server running (manual testing)"
+    echo "  3) Test all models"
+    echo "  4) Exit and stop server"
+    echo ""
+    
+    read -p "Choose option [1-4]: " -n 1 -r
+    echo ""
+    echo ""
+    
+    case $REPLY in
+        1)
+            run_continuous_test
+            ;;
+        2)
+            log_info "Server is running in background"
+            log_info "Press Ctrl+C to stop..."
+            while true; do
+                sleep 10
+            done
+            ;;
+        3)
+            bash "${SCRIPT_DIR}/send_openai_request.sh" --port "$PORT" --all-models
+            interactive_mode
+            ;;
+        4)
+            log_info "Stopping server..."
+            exit 0
+            ;;
+        *)
+            log_warning "Invalid option"
+            interactive_mode
+            ;;
+    esac
+}
+
+################################################################################
+# Main Flow
 ################################################################################
 
 main() {
-    print_header
+    print_banner
     
-    # Initial validation
-    check_project_root
-    check_dependencies
+    parse_arguments "$@"
     
-    # Create logs directory
-    mkdir -p "$LOGS_DIR"
+    # Show configuration
+    log_info "Configuration:"
+    echo -e "  Port: ${YELLOW}${PORT}${NC}"
+    echo -e "  Provider: ${YELLOW}${PROVIDER_MODE}${NC}"
+    echo -e "  Skip Deploy: ${YELLOW}${SKIP_DEPLOY}${NC}"
+    echo -e "  Skip Tests: ${YELLOW}${NO_TEST}${NC}"
     
-    # Step 1: Setup environment
-    run_setup
+    # Run workflow
+    run_deployment
+    start_server
+    test_api
+    display_summary
     
-    # Step 2: Start server
-    run_server_start
-    
-    # Step 3: Run tests
-    local test_result=0
-    run_tests || test_result=$?
-    
-    # Display final information
-    print_footer
-    load_config
-    print_server_info
-    print_useful_commands
-    print_api_examples
-    
-    # Handle test results and offer log watching
-    if [[ $test_result -eq 0 ]]; then
-        log_success "🎉 All systems operational! Your Qwen API is ready to use."
-        echo ""
-        echo -e "${GREEN}${BOLD}Would you like to watch the server logs? (Y/n):${NC}"
-        read -r watch_logs_response
-        if [[ ! $watch_logs_response =~ ^[Nn]$ ]]; then
-            watch_logs
-        else
-            echo -e "${CYAN}Server continues running in background. Use commands above to manage it.${NC}"
-        fi
-    else
-        handle_test_failure
-        echo -e "${GREEN}${BOLD}Would you like to watch the server logs for debugging? (Y/n):${NC}"
-        read -r watch_logs_response
-        if [[ ! $watch_logs_response =~ ^[Nn]$ ]]; then
-            watch_logs
-        fi
-        exit 1
-    fi
+    # Interactive mode
+    interactive_mode
 }
 
-# Only run main if script is executed directly
-if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
-    main "$@"
-fi
+# Run main
+main "$@"
+
