@@ -1,2782 +1,365 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Qwen API",
+    "title": "Qwen OpenAI-Compatible API",
+    "description": "OpenAI-compatible API for Qwen language models",
     "version": "1.0.0",
-    "description": "OpenAPI specification for the Qwen API Proxy. Endpoints are OpenAI-compatible and proxied to Qwen services."
+    "contact": {
+      "name": "Qwen API Support",
+      "url": "https://qwen.aikit.club"
+    }
   },
   "servers": [
     {
-      "url": "https://qwen.aikit.club/v1"
+      "url": "http://localhost:7050",
+      "description": "Local development server"
     },
     {
-      "url": "https://{host}/v1",
-      "variables": {
-        "host": {
-          "default": "qwen.aikit.club"
+      "url": "https://qwen.aikit.club",
+      "description": "Qwen API server"
+    }
+  ],
+  "security": [
+    {
+      "BearerAuth": []
+    }
+  ],
+  "paths": {
+    "/": {
+      "get": {
+        "summary": "Health check",
+        "description": "Check if the API server is running",
+        "responses": {
+          "200": {
+            "description": "Server is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "ok"
+                    },
+                    "service": {
+                      "type": "string",
+                      "example": "Qwen OpenAI Proxy"
+                    },
+                    "version": {
+                      "type": "string",
+                      "example": "1.0.0"
+                    },
+                    "endpoints": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/models": {
+      "get": {
+        "summary": "List models",
+        "description": "List all available models",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelListResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/chat/completions": {
+      "post": {
+        "summary": "Create chat completion",
+        "description": "Create a chat completion using a Qwen model",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatRequest"
+              },
+              "examples": {
+                "simple": {
+                  "summary": "Simple chat request",
+                  "value": {
+                    "model": "qwen-max-latest",
+                    "messages": [
+                      {
+                        "role": "user",
+                        "content": "Hello! Can you help me?"
+                      }
+                    ],
+                    "temperature": 0.7
+                  }
+                },
+                "withContext": {
+                  "summary": "Chat with context",
+                  "value": {
+                    "model": "qwen-plus-latest",
+                    "messages": [
+                      {
+                        "role": "system",
+                        "content": "You are a helpful coding assistant."
+                      },
+                      {
+                        "role": "user",
+                        "content": "How do I fix this Python error?"
+                      }
+                    ],
+                    "temperature": 0.5,
+                    "max_tokens": 1000
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
         }
       }
     }
-  ],
+  },
   "components": {
     "securitySchemes": {
       "BearerAuth": {
         "type": "http",
-        "scheme": "bearer"
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
       }
     },
     "schemas": {
-      "ErrorResponse": {
+      "Message": {
         "type": "object",
-        "properties": {
-          "error": {
-            "type": "object",
-            "properties": {
-              "message": {
-                "type": "string"
-              },
-              "type": {
-                "type": "string"
-              },
-              "param": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              },
-              "code": {
-                "oneOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "integer"
-                  }
-                ]
-              }
-            },
-            "required": [
-              "message",
-              "type",
-              "code"
-            ]
-          }
-        },
-        "required": [
-          "error"
-        ]
-      },
-      "ModelObject": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "object": {
-            "type": "string",
-            "example": "model"
-          },
-          "owned_by": {
-            "type": [
-              "string",
-              "null"
-            ]
-          }
-        },
-        "required": [
-          "id",
-          "object"
-        ]
-      },
-      "ModelList": {
-        "type": "object",
-        "properties": {
-          "object": {
-            "type": "string",
-            "example": "list"
-          },
-          "data": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "id": {
-                  "type": "string"
-                },
-                "object": {
-                  "type": "string",
-                  "example": "model"
-                },
-                "owned_by": {
-                  "type": [
-                    "string",
-                    "null"
-                  ]
-                }
-              },
-              "required": [
-                "id",
-                "object"
-              ]
-            }
-          }
-        },
-        "required": [
-          "object",
-          "data"
-        ]
-      },
-      "ChatContentText": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "enum": [
-              "text"
-            ]
-          },
-          "text": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "type",
-          "text"
-        ]
-      },
-      "UrlRef": {
-        "type": "object",
-        "properties": {
-          "url": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "url"
-        ]
-      },
-      "ChatContentImageUrl": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "enum": [
-              "image_url"
-            ]
-          },
-          "image_url": {
-            "type": "object",
-            "properties": {
-              "url": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "url"
-            ]
-          }
-        },
-        "required": [
-          "type",
-          "image_url"
-        ]
-      },
-      "ChatContentAudioUrl": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "enum": [
-              "audio_url"
-            ]
-          },
-          "audio_url": {
-            "type": "object",
-            "properties": {
-              "url": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "url"
-            ]
-          }
-        },
-        "required": [
-          "type",
-          "audio_url"
-        ]
-      },
-      "ChatContentVideoUrl": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "enum": [
-              "video_url"
-            ]
-          },
-          "video_url": {
-            "type": "object",
-            "properties": {
-              "url": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "url"
-            ]
-          }
-        },
-        "required": [
-          "type",
-          "video_url"
-        ]
-      },
-      "ChatContentFileUrl": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "enum": [
-              "file_url"
-            ]
-          },
-          "file_url": {
-            "type": "object",
-            "properties": {
-              "url": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "url"
-            ]
-          }
-        },
-        "required": [
-          "type",
-          "file_url"
-        ]
-      },
-      "ChatContentPart": {
-        "oneOf": [
-          {
-            "type": "object",
-            "properties": {
-              "type": {
-                "type": "string",
-                "enum": [
-                  "text"
-                ]
-              },
-              "text": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "type",
-              "text"
-            ]
-          },
-          {
-            "type": "object",
-            "properties": {
-              "type": {
-                "type": "string",
-                "enum": [
-                  "image_url"
-                ]
-              },
-              "image_url": {
-                "type": "object",
-                "properties": {
-                  "url": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "url"
-                ]
-              }
-            },
-            "required": [
-              "type",
-              "image_url"
-            ]
-          },
-          {
-            "type": "object",
-            "properties": {
-              "type": {
-                "type": "string",
-                "enum": [
-                  "audio_url"
-                ]
-              },
-              "audio_url": {
-                "type": "object",
-                "properties": {
-                  "url": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "url"
-                ]
-              }
-            },
-            "required": [
-              "type",
-              "audio_url"
-            ]
-          },
-          {
-            "type": "object",
-            "properties": {
-              "type": {
-                "type": "string",
-                "enum": [
-                  "video_url"
-                ]
-              },
-              "video_url": {
-                "type": "object",
-                "properties": {
-                  "url": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "url"
-                ]
-              }
-            },
-            "required": [
-              "type",
-              "video_url"
-            ]
-          },
-          {
-            "type": "object",
-            "properties": {
-              "type": {
-                "type": "string",
-                "enum": [
-                  "file_url"
-                ]
-              },
-              "file_url": {
-                "type": "object",
-                "properties": {
-                  "url": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "url"
-                ]
-              }
-            },
-            "required": [
-              "type",
-              "file_url"
-            ]
-          }
-        ]
-      },
-      "ChatMessage": {
-        "type": "object",
+        "required": ["role", "content"],
         "properties": {
           "role": {
             "type": "string",
-            "enum": [
-              "system",
-              "user",
-              "assistant",
-              "tool"
-            ]
+            "enum": ["system", "user", "assistant"],
+            "description": "The role of the message author"
           },
           "content": {
-            "oneOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "array",
-                "items": {
-                  "oneOf": [
-                    {
-                      "type": "object",
-                      "properties": {
-                        "type": {
-                          "type": "string",
-                          "enum": [
-                            "text"
-                          ]
-                        },
-                        "text": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "type",
-                        "text"
-                      ]
-                    },
-                    {
-                      "type": "object",
-                      "properties": {
-                        "type": {
-                          "type": "string",
-                          "enum": [
-                            "image_url"
-                          ]
-                        },
-                        "image_url": {
-                          "type": "object",
-                          "properties": {
-                            "url": {
-                              "type": "string"
-                            }
-                          },
-                          "required": [
-                            "url"
-                          ]
-                        }
-                      },
-                      "required": [
-                        "type",
-                        "image_url"
-                      ]
-                    },
-                    {
-                      "type": "object",
-                      "properties": {
-                        "type": {
-                          "type": "string",
-                          "enum": [
-                            "audio_url"
-                          ]
-                        },
-                        "audio_url": {
-                          "type": "object",
-                          "properties": {
-                            "url": {
-                              "type": "string"
-                            }
-                          },
-                          "required": [
-                            "url"
-                          ]
-                        }
-                      },
-                      "required": [
-                        "type",
-                        "audio_url"
-                      ]
-                    },
-                    {
-                      "type": "object",
-                      "properties": {
-                        "type": {
-                          "type": "string",
-                          "enum": [
-                            "video_url"
-                          ]
-                        },
-                        "video_url": {
-                          "type": "object",
-                          "properties": {
-                            "url": {
-                              "type": "string"
-                            }
-                          },
-                          "required": [
-                            "url"
-                          ]
-                        }
-                      },
-                      "required": [
-                        "type",
-                        "video_url"
-                      ]
-                    },
-                    {
-                      "type": "object",
-                      "properties": {
-                        "type": {
-                          "type": "string",
-                          "enum": [
-                            "file_url"
-                          ]
-                        },
-                        "file_url": {
-                          "type": "object",
-                          "properties": {
-                            "url": {
-                              "type": "string"
-                            }
-                          },
-                          "required": [
-                            "url"
-                          ]
-                        }
-                      },
-                      "required": [
-                        "type",
-                        "file_url"
-                      ]
-                    }
-                  ]
-                }
-              }
-            ]
-          }
-        },
-        "required": [
-          "role",
-          "content"
-        ]
-      },
-      "ToolDefinition": {
-        "type": "object",
-        "properties": {
-          "type": {
             "type": "string",
-            "enum": [
-              "web_search",
-              "code"
-            ]
+            "description": "The content of the message"
           }
-        },
-        "required": [
-          "type"
-        ]
+        }
       },
       "ChatRequest": {
         "type": "object",
+        "required": ["model", "messages"],
         "properties": {
           "model": {
             "type": "string",
-            "description": "Model ID (e.g., qwen-max-latest, qwen3-coder-plus, qwen-deep-research)"
+            "enum": [
+              "qwen-max-latest",
+              "qwen-plus-latest",
+              "qwen-turbo-latest"
+            ],
+            "description": "ID of the model to use"
           },
           "messages": {
             "type": "array",
             "items": {
-              "type": "object",
-              "properties": {
-                "role": {
-                  "type": "string",
-                  "enum": [
-                    "system",
-                    "user",
-                    "assistant",
-                    "tool"
-                  ]
-                },
-                "content": {
-                  "oneOf": [
-                    {
-                      "type": "string"
-                    },
-                    {
-                      "type": "array",
-                      "items": {
-                        "oneOf": [
-                          {
-                            "type": "object",
-                            "properties": {
-                              "type": {
-                                "type": "string",
-                                "enum": [
-                                  "text"
-                                ]
-                              },
-                              "text": {
-                                "type": "string"
-                              }
-                            },
-                            "required": [
-                              "type",
-                              "text"
-                            ]
-                          },
-                          {
-                            "type": "object",
-                            "properties": {
-                              "type": {
-                                "type": "string",
-                                "enum": [
-                                  "image_url"
-                                ]
-                              },
-                              "image_url": {
-                                "type": "object",
-                                "properties": {
-                                  "url": {
-                                    "type": "string"
-                                  }
-                                },
-                                "required": [
-                                  "url"
-                                ]
-                              }
-                            },
-                            "required": [
-                              "type",
-                              "image_url"
-                            ]
-                          },
-                          {
-                            "type": "object",
-                            "properties": {
-                              "type": {
-                                "type": "string",
-                                "enum": [
-                                  "audio_url"
-                                ]
-                              },
-                              "audio_url": {
-                                "type": "object",
-                                "properties": {
-                                  "url": {
-                                    "type": "string"
-                                  }
-                                },
-                                "required": [
-                                  "url"
-                                ]
-                              }
-                            },
-                            "required": [
-                              "type",
-                              "audio_url"
-                            ]
-                          },
-                          {
-                            "type": "object",
-                            "properties": {
-                              "type": {
-                                "type": "string",
-                                "enum": [
-                                  "video_url"
-                                ]
-                              },
-                              "video_url": {
-                                "type": "object",
-                                "properties": {
-                                  "url": {
-                                    "type": "string"
-                                  }
-                                },
-                                "required": [
-                                  "url"
-                                ]
-                              }
-                            },
-                            "required": [
-                              "type",
-                              "video_url"
-                            ]
-                          },
-                          {
-                            "type": "object",
-                            "properties": {
-                              "type": {
-                                "type": "string",
-                                "enum": [
-                                  "file_url"
-                                ]
-                              },
-                              "file_url": {
-                                "type": "object",
-                                "properties": {
-                                  "url": {
-                                    "type": "string"
-                                  }
-                                },
-                                "required": [
-                                  "url"
-                                ]
-                              }
-                            },
-                            "required": [
-                              "type",
-                              "file_url"
-                            ]
-                          }
-                        ]
-                      }
-                    }
-                  ]
-                }
-              },
-              "required": [
-                "role",
-                "content"
-              ]
-            }
+              "$ref": "#/components/schemas/Message"
+            },
+            "minItems": 1,
+            "description": "List of messages comprising the conversation"
+          },
+          "temperature": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2,
+            "default": 0.7,
+            "description": "Sampling temperature (0-2)"
+          },
+          "max_tokens": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 32000,
+            "default": 2000,
+            "description": "Maximum tokens to generate"
+          },
+          "top_p": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "default": 1,
+            "description": "Nucleus sampling parameter"
           },
           "stream": {
             "type": "boolean",
-            "default": false
-          },
-          "tools": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "type": {
-                  "type": "string",
-                  "enum": [
-                    "web_search",
-                    "code"
-                  ]
-                }
-              },
-              "required": [
-                "type"
-              ]
-            }
-          },
-          "enable_thinking": {
-            "type": "boolean",
-            "description": "Enable reasoning/thinking mode"
-          },
-          "thinking_budget": {
-            "type": "integer",
-            "description": "Thinking budget in ms"
+            "default": false,
+            "description": "Whether to stream responses"
           }
-        },
-        "required": [
-          "model",
-          "messages"
-        ]
+        }
       },
-      "ChatChoiceMessage": {
+      "ChatChoice": {
         "type": "object",
-        "properties": {
-          "role": {
-            "type": "string"
-          },
-          "content": {
-            "type": "string"
-          },
-          "reasoning_content": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "role",
-          "content"
-        ]
-      },
-      "ChatCompletionChoice": {
-        "type": "object",
+        "required": ["index", "message", "finish_reason"],
         "properties": {
           "index": {
-            "type": "integer"
+            "type": "integer",
+            "description": "Choice index"
           },
           "message": {
-            "type": "object",
-            "properties": {
-              "role": {
-                "type": "string"
-              },
-              "content": {
-                "type": "string"
-              },
-              "reasoning_content": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "role",
-              "content"
-            ]
+            "$ref": "#/components/schemas/Message"
           },
           "finish_reason": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": "string",
+            "enum": ["stop", "length", "content_filter"],
+            "description": "Reason the model stopped"
           }
-        },
-        "required": [
-          "index",
-          "message"
-        ]
+        }
+      },
+      "Usage": {
+        "type": "object",
+        "properties": {
+          "prompt_tokens": {
+            "type": "integer"
+          },
+          "completion_tokens": {
+            "type": "integer"
+          },
+          "total_tokens": {
+            "type": "integer"
+          }
+        }
       },
       "ChatResponse": {
         "type": "object",
+        "required": ["id", "object", "created", "model", "choices"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique completion ID"
+          },
+          "object": {
+            "type": "string",
+            "enum": ["chat.completion"],
+            "description": "Object type"
+          },
+          "created": {
+            "type": "integer",
+            "description": "Unix timestamp"
+          },
+          "model": {
+            "type": "string",
+            "description": "Model used"
+          },
+          "system_fingerprint": {
+            "type": "string",
+            "description": "System fingerprint"
+          },
+          "choices": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChatChoice"
+            }
+          },
+          "usage": {
+            "$ref": "#/components/schemas/Usage"
+          }
+        }
+      },
+      "Model": {
+        "type": "object",
+        "required": ["id", "object", "created", "owned_by"],
         "properties": {
           "id": {
             "type": "string"
           },
           "object": {
             "type": "string",
-            "example": "chat.completion"
+            "enum": ["model"]
           },
           "created": {
             "type": "integer"
           },
-          "model": {
+          "owned_by": {
             "type": "string"
-          },
-          "system_fingerprint": {
-            "type": "string"
-          },
-          "choices": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "index": {
-                  "type": "integer"
-                },
-                "message": {
-                  "type": "object",
-                  "properties": {
-                    "role": {
-                      "type": "string"
-                    },
-                    "content": {
-                      "type": "string"
-                    },
-                    "reasoning_content": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "role",
-                    "content"
-                  ]
-                },
-                "finish_reason": {
-                  "type": [
-                    "string",
-                    "null"
-                  ]
-                }
-              },
-              "required": [
-                "index",
-                "message"
-              ]
-            }
           }
-        },
-        "required": [
-          "id",
-          "object",
-          "created",
-          "model",
-          "choices"
-        ]
+        }
       },
-      "ValidateRequest": {
+      "ModelListResponse": {
         "type": "object",
+        "required": ["object", "data"],
         "properties": {
-          "token": {
+          "object": {
             "type": "string",
-            "description": "Compressed token produced by the README JS snippet"
-          }
-        },
-        "required": [
-          "token"
-        ]
-      },
-      "GenericUpstreamResponse": {
-        "type": "object",
-        "description": "Upstream response passthrough",
-        "additionalProperties": true
-      },
-      "ImageGenerationRequest": {
-        "type": "object",
-        "properties": {
-          "prompt": {
-            "type": "string"
-          },
-          "size": {
-            "type": "string",
-            "example": "1024x1024",
-            "description": "Target size; proxy maps to aspect ratio"
-          }
-        },
-        "required": [
-          "prompt"
-        ]
-      },
-      "ImageOrVideoResponse": {
-        "type": "object",
-        "properties": {
-          "created": {
-            "type": "integer"
+            "enum": ["list"]
           },
           "data": {
             "type": "array",
             "items": {
-              "type": "object",
-              "properties": {
-                "url": {
-                  "type": "string"
-                }
-              },
-              "required": [
-                "url"
-              ]
+              "$ref": "#/components/schemas/Model"
             }
           }
-        },
-        "required": [
-          "created",
-          "data"
-        ]
+        }
       },
-      "ImageEditJsonRequest": {
+      "Error": {
         "type": "object",
+        "required": ["detail"],
         "properties": {
-          "prompt": {
-            "type": "string"
-          },
-          "image": {
-            "oneOf": [
-              {
-                "type": "string",
-                "format": "uri",
-                "description": "Remote image URL"
-              },
-              {
-                "type": "string",
-                "description": "Data URL base64 image"
-              }
-            ]
-          }
-        },
-        "required": [
-          "prompt",
-          "image"
-        ]
-      }
-    }
-  },
-  "paths": {
-    "/models": {
-      "get": {
-        "summary": "List available models",
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "object": {
-                      "type": "string",
-                      "example": "list"
-                    },
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "id": {
-                            "type": "string"
-                          },
-                          "object": {
-                            "type": "string",
-                            "example": "model"
-                          },
-                          "owned_by": {
-                            "type": [
-                              "string",
-                              "null"
-                            ]
-                          }
-                        },
-                        "required": [
-                          "id",
-                          "object"
-                        ]
-                      }
-                    }
-                  },
-                  "required": [
-                    "object",
-                    "data"
-                  ]
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "properties": {
-                        "message": {
-                          "type": "string"
-                        },
-                        "type": {
-                          "type": "string"
-                        },
-                        "param": {
-                          "type": [
-                            "string",
-                            "null"
-                          ]
-                        },
-                        "code": {
-                          "oneOf": [
-                            {
-                              "type": "string"
-                            },
-                            {
-                              "type": "integer"
-                            }
-                          ]
-                        }
-                      },
-                      "required": [
-                        "message",
-                        "type",
-                        "code"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/validate": {
-      "post": {
-        "summary": "Validate compressed token (via request body)",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "token": {
-                    "type": "string",
-                    "description": "Compressed token produced by the README JS snippet"
-                  }
-                },
-                "required": [
-                  "token"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Validation result",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "description": "Upstream response passthrough",
-                  "additionalProperties": true
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "properties": {
-                        "message": {
-                          "type": "string"
-                        },
-                        "type": {
-                          "type": "string"
-                        },
-                        "param": {
-                          "type": [
-                            "string",
-                            "null"
-                          ]
-                        },
-                        "code": {
-                          "oneOf": [
-                            {
-                              "type": "string"
-                            },
-                            {
-                              "type": "integer"
-                            }
-                          ]
-                        }
-                      },
-                      "required": [
-                        "message",
-                        "type",
-                        "code"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      },
-      "get": {
-        "summary": "Validate compressed token (via query parameter)",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "token",
-            "schema": {
-              "type": "string"
-            },
-            "required": true,
-            "description": "Compressed token from JS snippet"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Validation result",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "description": "Upstream response passthrough",
-                  "additionalProperties": true
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "properties": {
-                        "message": {
-                          "type": "string"
-                        },
-                        "type": {
-                          "type": "string"
-                        },
-                        "param": {
-                          "type": [
-                            "string",
-                            "null"
-                          ]
-                        },
-                        "code": {
-                          "oneOf": [
-                            {
-                              "type": "string"
-                            },
-                            {
-                              "type": "integer"
-                            }
-                          ]
-                        }
-                      },
-                      "required": [
-                        "message",
-                        "type",
-                        "code"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/refresh": {
-      "post": {
-        "summary": "Refresh authentication token (via request body)",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "token": {
-                    "type": "string",
-                    "description": "Compressed token produced by the README JS snippet"
-                  }
-                },
-                "required": [
-                  "token"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Token refresh result with compressed access_token",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "description": "Upstream response passthrough",
-                  "additionalProperties": true
-                },
-                "examples": {
-                  "success": {
-                    "summary": "Successful token refresh",
-                    "value": {
-                      "timestamp": "2025-01-21 02:58:14 UTC (2025-01-21 08:28:14 IST, UTC+05:30)",
-                      "expires_at": 1737447494,
-                      "access_token": "H4sIAAAAAAAAA+2VyQ6CQAyF...compressed_gzip_data..."
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "properties": {
-                        "message": {
-                          "type": "string"
-                        },
-                        "type": {
-                          "type": "string"
-                        },
-                        "param": {
-                          "type": [
-                            "string",
-                            "null"
-                          ]
-                        },
-                        "code": {
-                          "oneOf": [
-                            {
-                              "type": "string"
-                            },
-                            {
-                              "type": "integer"
-                            }
-                          ]
-                        }
-                      },
-                      "required": [
-                        "message",
-                        "type",
-                        "code"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      },
-      "get": {
-        "summary": "Refresh authentication token (via query parameter)",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "token",
-            "schema": {
-              "type": "string"
-            },
-            "required": true,
-            "description": "Current token for refresh"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Token refresh result with compressed access_token",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "description": "Upstream response passthrough",
-                  "additionalProperties": true
-                },
-                "examples": {
-                  "success": {
-                    "summary": "Successful token refresh",
-                    "value": {
-                      "timestamp": "2025-01-21 02:58:14 UTC (2025-01-21 08:28:14 IST, UTC+05:30)",
-                      "expires_at": 1737447494,
-                      "access_token": "H4sIAAAAAAAAA+2VyQ6CQAyF...compressed_gzip_data..."
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "properties": {
-                        "message": {
-                          "type": "string"
-                        },
-                        "type": {
-                          "type": "string"
-                        },
-                        "param": {
-                          "type": [
-                            "string",
-                            "null"
-                          ]
-                        },
-                        "code": {
-                          "oneOf": [
-                            {
-                              "type": "string"
-                            },
-                            {
-                              "type": "integer"
-                            }
-                          ]
-                        }
-                      },
-                      "required": [
-                        "message",
-                        "type",
-                        "code"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/chat/completions": {
-      "post": {
-        "summary": "Create chat completion (OpenAI-compatible)",
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "model": {
-                    "type": "string",
-                    "description": "Model ID (e.g., qwen-max-latest, qwen3-coder-plus, qwen-deep-research)"
-                  },
-                  "messages": {
-                    "type": "array",
-                    "items": {
-                      "type": "object",
-                      "properties": {
-                        "role": {
-                          "type": "string",
-                          "enum": [
-                            "system",
-                            "user",
-                            "assistant",
-                            "tool"
-                          ]
-                        },
-                        "content": {
-                          "oneOf": [
-                            {
-                              "type": "string"
-                            },
-                            {
-                              "type": "array",
-                              "items": {
-                                "oneOf": [
-                                  {
-                                    "type": "object",
-                                    "properties": {
-                                      "type": {
-                                        "type": "string",
-                                        "enum": [
-                                          "text"
-                                        ]
-                                      },
-                                      "text": {
-                                        "type": "string"
-                                      }
-                                    },
-                                    "required": [
-                                      "type",
-                                      "text"
-                                    ]
-                                  },
-                                  {
-                                    "type": "object",
-                                    "properties": {
-                                      "type": {
-                                        "type": "string",
-                                        "enum": [
-                                          "image_url"
-                                        ]
-                                      },
-                                      "image_url": {
-                                        "type": "object",
-                                        "properties": {
-                                          "url": {
-                                            "type": "string"
-                                          }
-                                        },
-                                        "required": [
-                                          "url"
-                                        ]
-                                      }
-                                    },
-                                    "required": [
-                                      "type",
-                                      "image_url"
-                                    ]
-                                  },
-                                  {
-                                    "type": "object",
-                                    "properties": {
-                                      "type": {
-                                        "type": "string",
-                                        "enum": [
-                                          "audio_url"
-                                        ]
-                                      },
-                                      "audio_url": {
-                                        "type": "object",
-                                        "properties": {
-                                          "url": {
-                                            "type": "string"
-                                          }
-                                        },
-                                        "required": [
-                                          "url"
-                                        ]
-                                      }
-                                    },
-                                    "required": [
-                                      "type",
-                                      "audio_url"
-                                    ]
-                                  },
-                                  {
-                                    "type": "object",
-                                    "properties": {
-                                      "type": {
-                                        "type": "string",
-                                        "enum": [
-                                          "video_url"
-                                        ]
-                                      },
-                                      "video_url": {
-                                        "type": "object",
-                                        "properties": {
-                                          "url": {
-                                            "type": "string"
-                                          }
-                                        },
-                                        "required": [
-                                          "url"
-                                        ]
-                                      }
-                                    },
-                                    "required": [
-                                      "type",
-                                      "video_url"
-                                    ]
-                                  },
-                                  {
-                                    "type": "object",
-                                    "properties": {
-                                      "type": {
-                                        "type": "string",
-                                        "enum": [
-                                          "file_url"
-                                        ]
-                                      },
-                                      "file_url": {
-                                        "type": "object",
-                                        "properties": {
-                                          "url": {
-                                            "type": "string"
-                                          }
-                                        },
-                                        "required": [
-                                          "url"
-                                        ]
-                                      }
-                                    },
-                                    "required": [
-                                      "type",
-                                      "file_url"
-                                    ]
-                                  }
-                                ]
-                              }
-                            }
-                          ]
-                        }
-                      },
-                      "required": [
-                        "role",
-                        "content"
-                      ]
-                    }
-                  },
-                  "stream": {
-                    "type": "boolean",
-                    "default": false
-                  },
-                  "tools": {
-                    "type": "array",
-                    "items": {
-                      "type": "object",
-                      "properties": {
-                        "type": {
-                          "type": "string",
-                          "enum": [
-                            "web_search",
-                            "code"
-                          ]
-                        }
-                      },
-                      "required": [
-                        "type"
-                      ]
-                    }
-                  },
-                  "enable_thinking": {
-                    "type": "boolean",
-                    "description": "Enable reasoning/thinking mode"
-                  },
-                  "thinking_budget": {
-                    "type": "integer",
-                    "description": "Thinking budget in ms"
-                  }
-                },
-                "required": [
-                  "model",
-                  "messages"
-                ]
-              },
-              "examples": {
-                "basic": {
-                  "summary": "Basic chat completion",
-                  "value": {
-                    "model": "qwen-max-latest",
-                    "messages": [
-                      {
-                        "role": "user",
-                        "content": "Hello, how are you?"
-                      }
-                    ],
-                    "stream": false
-                  }
-                },
-                "web_search": {
-                  "summary": "Chat with web search tool",
-                  "value": {
-                    "model": "qwen-max-latest",
-                    "tools": [
-                      {
-                        "type": "web_search"
-                      }
-                    ],
-                    "messages": [
-                      {
-                        "role": "user",
-                        "content": "What are the latest AI developments?"
-                      }
-                    ],
-                    "stream": false
-                  }
-                },
-                "thinking": {
-                  "summary": "Thinking mode",
-                  "value": {
-                    "model": "qwen-max-latest",
-                    "enable_thinking": true,
-                    "thinking_budget": 30000,
-                    "messages": [
-                      {
-                        "role": "user",
-                        "content": "Solve this complex math problem: ..."
-                      }
-                    ],
-                    "stream": false
-                  }
-                },
-                "coder": {
-                  "summary": "Code generation (qwen3-coder-plus)",
-                  "value": {
-                    "model": "qwen3-coder-plus",
-                    "tools": [
-                      {
-                        "type": "code"
-                      }
-                    ],
-                    "messages": [
-                      {
-                        "role": "user",
-                        "content": "Write a JavaScript function to add two numbers"
-                      }
-                    ],
-                    "stream": false
-                  }
-                },
-                "multimodal": {
-                  "summary": "Vision-style multimodal",
-                  "value": {
-                    "model": "qwen-max-latest",
-                    "messages": [
-                      {
-                        "role": "user",
-                        "content": [
-                          {
-                            "type": "text",
-                            "text": "What do you see in this image?"
-                          },
-                          {
-                            "type": "image_url",
-                            "image_url": {
-                              "url": "https://download.samplelib.com/png/sample-hut-400x300.png"
-                            }
-                          }
-                        ]
-                      }
-                    ],
-                    "stream": false
-                  }
-                },
-                "deep_research": {
-                  "summary": "Deep research",
-                  "value": {
-                    "model": "qwen-deep-research",
-                    "messages": [
-                      {
-                        "role": "user",
-                        "content": "Research the latest developments in quantum computing"
-                      }
-                    ],
-                    "stream": false
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "string"
-                    },
-                    "object": {
-                      "type": "string",
-                      "example": "chat.completion"
-                    },
-                    "created": {
-                      "type": "integer"
-                    },
-                    "model": {
-                      "type": "string"
-                    },
-                    "system_fingerprint": {
-                      "type": "string"
-                    },
-                    "choices": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "index": {
-                            "type": "integer"
-                          },
-                          "message": {
-                            "type": "object",
-                            "properties": {
-                              "role": {
-                                "type": "string"
-                              },
-                              "content": {
-                                "type": "string"
-                              },
-                              "reasoning_content": {
-                                "type": "string"
-                              }
-                            },
-                            "required": [
-                              "role",
-                              "content"
-                            ]
-                          },
-                          "finish_reason": {
-                            "type": [
-                              "string",
-                              "null"
-                            ]
-                          }
-                        },
-                        "required": [
-                          "index",
-                          "message"
-                        ]
-                      }
-                    }
-                  },
-                  "required": [
-                    "id",
-                    "object",
-                    "created",
-                    "model",
-                    "choices"
-                  ]
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "properties": {
-                        "message": {
-                          "type": "string"
-                        },
-                        "type": {
-                          "type": "string"
-                        },
-                        "param": {
-                          "type": [
-                            "string",
-                            "null"
-                          ]
-                        },
-                        "code": {
-                          "oneOf": [
-                            {
-                              "type": "string"
-                            },
-                            {
-                              "type": "integer"
-                            }
-                          ]
-                        }
-                      },
-                      "required": [
-                        "message",
-                        "type",
-                        "code"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ]
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "properties": {
-                        "message": {
-                          "type": "string"
-                        },
-                        "type": {
-                          "type": "string"
-                        },
-                        "param": {
-                          "type": [
-                            "string",
-                            "null"
-                          ]
-                        },
-                        "code": {
-                          "oneOf": [
-                            {
-                              "type": "string"
-                            },
-                            {
-                              "type": "integer"
-                            }
-                          ]
-                        }
-                      },
-                      "required": [
-                        "message",
-                        "type",
-                        "code"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ]
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Server error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "properties": {
-                        "message": {
-                          "type": "string"
-                        },
-                        "type": {
-                          "type": "string"
-                        },
-                        "param": {
-                          "type": [
-                            "string",
-                            "null"
-                          ]
-                        },
-                        "code": {
-                          "oneOf": [
-                            {
-                              "type": "string"
-                            },
-                            {
-                              "type": "integer"
-                            }
-                          ]
-                        }
-                      },
-                      "required": [
-                        "message",
-                        "type",
-                        "code"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/images/generations": {
-      "post": {
-        "summary": "Generate an image from a text prompt",
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "prompt": {
-                    "type": "string"
-                  },
-                  "size": {
-                    "type": "string",
-                    "example": "1024x1024",
-                    "description": "Target size; proxy maps to aspect ratio"
-                  }
-                },
-                "required": [
-                  "prompt"
-                ]
-              },
-              "example": {
-                "prompt": "A beautiful sunset over mountains",
-                "size": "1024x1024"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "created": {
-                      "type": "integer"
-                    },
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "url": {
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "url"
-                        ]
-                      }
-                    }
-                  },
-                  "required": [
-                    "created",
-                    "data"
-                  ]
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "properties": {
-                        "message": {
-                          "type": "string"
-                        },
-                        "type": {
-                          "type": "string"
-                        },
-                        "param": {
-                          "type": [
-                            "string",
-                            "null"
-                          ]
-                        },
-                        "code": {
-                          "oneOf": [
-                            {
-                              "type": "string"
-                            },
-                            {
-                              "type": "integer"
-                            }
-                          ]
-                        }
-                      },
-                      "required": [
-                        "message",
-                        "type",
-                        "code"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ]
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "properties": {
-                        "message": {
-                          "type": "string"
-                        },
-                        "type": {
-                          "type": "string"
-                        },
-                        "param": {
-                          "type": [
-                            "string",
-                            "null"
-                          ]
-                        },
-                        "code": {
-                          "oneOf": [
-                            {
-                              "type": "string"
-                            },
-                            {
-                              "type": "integer"
-                            }
-                          ]
-                        }
-                      },
-                      "required": [
-                        "message",
-                        "type",
-                        "code"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/images/edits": {
-      "post": {
-        "summary": "Edit an image using a prompt",
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "multipart/form-data": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "prompt": {
-                    "type": "string"
-                  },
-                  "image": {
-                    "type": "string",
-                    "format": "binary"
-                  }
-                },
-                "required": [
-                  "prompt",
-                  "image"
-                ]
-              }
-            },
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "prompt": {
-                    "type": "string"
-                  },
-                  "image": {
-                    "oneOf": [
-                      {
-                        "type": "string",
-                        "format": "uri",
-                        "description": "Remote image URL"
-                      },
-                      {
-                        "type": "string",
-                        "description": "Data URL base64 image"
-                      }
-                    ]
-                  }
-                },
-                "required": [
-                  "prompt",
-                  "image"
-                ]
-              },
-              "example": {
-                "prompt": "Add a rainbow in the background",
-                "image": "https://example.com/image.jpg"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "created": {
-                      "type": "integer"
-                    },
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "url": {
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "url"
-                        ]
-                      }
-                    }
-                  },
-                  "required": [
-                    "created",
-                    "data"
-                  ]
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "properties": {
-                        "message": {
-                          "type": "string"
-                        },
-                        "type": {
-                          "type": "string"
-                        },
-                        "param": {
-                          "type": [
-                            "string",
-                            "null"
-                          ]
-                        },
-                        "code": {
-                          "oneOf": [
-                            {
-                              "type": "string"
-                            },
-                            {
-                              "type": "integer"
-                            }
-                          ]
-                        }
-                      },
-                      "required": [
-                        "message",
-                        "type",
-                        "code"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ]
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "properties": {
-                        "message": {
-                          "type": "string"
-                        },
-                        "type": {
-                          "type": "string"
-                        },
-                        "param": {
-                          "type": [
-                            "string",
-                            "null"
-                          ]
-                        },
-                        "code": {
-                          "oneOf": [
-                            {
-                              "type": "string"
-                            },
-                            {
-                              "type": "integer"
-                            }
-                          ]
-                        }
-                      },
-                      "required": [
-                        "message",
-                        "type",
-                        "code"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/videos/generations": {
-      "post": {
-        "summary": "Generate a video from a text prompt",
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "prompt": {
-                    "type": "string"
-                  },
-                  "size": {
-                    "type": "string",
-                    "example": "1024x1024",
-                    "description": "Target size; proxy maps to aspect ratio"
-                  }
-                },
-                "required": [
-                  "prompt"
-                ]
-              },
-              "example": {
-                "prompt": "A cat playing with a ball of yarn in slow motion",
-                "size": "1280x720"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "created": {
-                      "type": "integer"
-                    },
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "url": {
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "url"
-                        ]
-                      }
-                    }
-                  },
-                  "required": [
-                    "created",
-                    "data"
-                  ]
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "properties": {
-                        "message": {
-                          "type": "string"
-                        },
-                        "type": {
-                          "type": "string"
-                        },
-                        "param": {
-                          "type": [
-                            "string",
-                            "null"
-                          ]
-                        },
-                        "code": {
-                          "oneOf": [
-                            {
-                              "type": "string"
-                            },
-                            {
-                              "type": "integer"
-                            }
-                          ]
-                        }
-                      },
-                      "required": [
-                        "message",
-                        "type",
-                        "code"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ]
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "properties": {
-                        "message": {
-                          "type": "string"
-                        },
-                        "type": {
-                          "type": "string"
-                        },
-                        "param": {
-                          "type": [
-                            "string",
-                            "null"
-                          ]
-                        },
-                        "code": {
-                          "oneOf": [
-                            {
-                              "type": "string"
-                            },
-                            {
-                              "type": "integer"
-                            }
-                          ]
-                        }
-                      },
-                      "required": [
-                        "message",
-                        "type",
-                        "code"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/chats/delete": {
-      "delete": {
-        "summary": "Delete all chats (via DELETE method)",
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "All chats deleted successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "example": true
-                    },
-                    "message": {
-                      "type": "string",
-                      "example": "All chats deleted successfully"
-                    },
-                    "data": {
-                      "type": "object",
-                      "properties": {
-                        "success": {
-                          "type": "boolean"
-                        },
-                        "request_id": {
-                          "type": "string"
-                        },
-                        "data": {
-                          "type": "object",
-                          "properties": {
-                            "status": {
-                              "type": "boolean"
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                },
-                "example": {
-                  "success": true,
-                  "message": "All chats deleted successfully",
-                  "data": {
-                    "success": true,
-                    "request_id": "26ef857e-fd55-4d35-b10a-78b43553a640",
-                    "data": {
-                      "status": true
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "properties": {
-                        "message": {
-                          "type": "string"
-                        },
-                        "type": {
-                          "type": "string"
-                        },
-                        "param": {
-                          "type": [
-                            "string",
-                            "null"
-                          ]
-                        },
-                        "code": {
-                          "oneOf": [
-                            {
-                              "type": "string"
-                            },
-                            {
-                              "type": "integer"
-                            }
-                          ]
-                        }
-                      },
-                      "required": [
-                        "message",
-                        "type",
-                        "code"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ]
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Server error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "properties": {
-                        "message": {
-                          "type": "string"
-                        },
-                        "type": {
-                          "type": "string"
-                        },
-                        "param": {
-                          "type": [
-                            "string",
-                            "null"
-                          ]
-                        },
-                        "code": {
-                          "oneOf": [
-                            {
-                              "type": "string"
-                            },
-                            {
-                              "type": "integer"
-                            }
-                          ]
-                        }
-                      },
-                      "required": [
-                        "message",
-                        "type",
-                        "code"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "summary": "Delete all chats (via POST method)",
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "All chats deleted successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "example": true
-                    },
-                    "message": {
-                      "type": "string",
-                      "example": "All chats deleted successfully"
-                    },
-                    "data": {
-                      "type": "object",
-                      "properties": {
-                        "success": {
-                          "type": "boolean"
-                        },
-                        "request_id": {
-                          "type": "string"
-                        },
-                        "data": {
-                          "type": "object",
-                          "properties": {
-                            "status": {
-                              "type": "boolean"
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                },
-                "example": {
-                  "success": true,
-                  "message": "All chats deleted successfully",
-                  "data": {
-                    "success": true,
-                    "request_id": "26ef857e-fd55-4d35-b10a-78b43553a640",
-                    "data": {
-                      "status": true
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "properties": {
-                        "message": {
-                          "type": "string"
-                        },
-                        "type": {
-                          "type": "string"
-                        },
-                        "param": {
-                          "type": [
-                            "string",
-                            "null"
-                          ]
-                        },
-                        "code": {
-                          "oneOf": [
-                            {
-                              "type": "string"
-                            },
-                            {
-                              "type": "integer"
-                            }
-                          ]
-                        }
-                      },
-                      "required": [
-                        "message",
-                        "type",
-                        "code"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ]
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Server error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "properties": {
-                        "message": {
-                          "type": "string"
-                        },
-                        "type": {
-                          "type": "string"
-                        },
-                        "param": {
-                          "type": [
-                            "string",
-                            "null"
-                          ]
-                        },
-                        "code": {
-                          "oneOf": [
-                            {
-                              "type": "string"
-                            },
-                            {
-                              "type": "integer"
-                            }
-                          ]
-                        }
-                      },
-                      "required": [
-                        "message",
-                        "type",
-                        "code"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ]
-                }
-              }
-            }
+          "detail": {
+            "type": "string",
+            "description": "Error message"
           }
         }
       }
     }
   }
 }
+
