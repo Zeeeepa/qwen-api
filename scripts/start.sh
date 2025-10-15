@@ -141,6 +141,43 @@ validate_environment() {
     log_info "Bearer token: ${#QWEN_BEARER_TOKEN} characters"
 }
 
+# Load and validate schemas
+load_schemas() {
+    log_step "3/7" "Loading JSON schemas..."
+    
+    # Check if schema files exist
+    if [ ! -f "qwen.json" ]; then
+        log_error "qwen.json schema file not found!"
+        exit 1
+    fi
+    
+    if [ ! -f "openapi.json" ]; then
+        log_error "openapi.json schema file not found!"
+        exit 1
+    fi
+    
+    # Validate JSON format
+    if ! jq empty qwen.json 2>/dev/null; then
+        log_error "qwen.json is not valid JSON!"
+        exit 1
+    fi
+    
+    if ! jq empty openapi.json 2>/dev/null; then
+        log_error "openapi.json is not valid JSON!"
+        exit 1
+    fi
+    
+    # Export schema paths for use by API server
+    export QWEN_SCHEMA_PATH="$(pwd)/qwen.json"
+    export OPENAPI_SCHEMA_PATH="$(pwd)/openapi.json"
+    export VALIDATION_ENABLED="${VALIDATION_ENABLED:-true}"
+    
+    log_success "Schemas loaded successfully"
+    log_info "Qwen schema: $QWEN_SCHEMA_PATH"
+    log_info "OpenAPI schema: $OPENAPI_SCHEMA_PATH"
+    log_info "Validation enabled: $VALIDATION_ENABLED"
+}
+
 # Parse command line arguments
 parse_arguments() {
     local port=$DEFAULT_PORT
@@ -380,6 +417,7 @@ main() {
     # Execute startup sequence
     check_existing_server "$port"
     validate_environment
+    load_schemas
     setup_signal_handlers
     local log_file=$(setup_logging)
     activate_environment
