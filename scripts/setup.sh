@@ -370,15 +370,30 @@ extract_bearer_token() {
         exit 1
     fi
     
-    log_info "Attempting automated token extraction..."
+    log_info "Attempting automated token extraction with Playwright..."
     
-    # Try automated extraction (updated path: tests/integration/test_auth.py)
-    if python3 tests/integration/test_auth.py > /tmp/token_extraction.log 2>&1; then
-        # Extract token from output
-        TOKEN=$(grep "QWEN_BEARER_TOKEN=" /tmp/token_extraction.log | cut -d'=' -f2 | tr -d '[:space:]')
-        
+    # Check if token already exists and is not expired
+    if [ -n "$QWEN_BEARER_TOKEN" ] && [ "$QWEN_BEARER_TOKEN" != "your-bearer-token-here" ]; then
+        log_info "Checking existing token expiration..."
+        if python3 scripts/check_jwt_expiry.py "$QWEN_BEARER_TOKEN" --verbose > /tmp/jwt_check.json 2>&1; then
+            log_success "Existing token is still valid!"
+            return 0
+        else
+            log_warning "Token expired, fetching new one..."
+        fi
+    fi
+    
+    # Extract new token using Playwright automation
+    log_info "Using Playwright to log in and extract token..."
+    if TOKEN=$(python3 scripts/get_qwen_token.py 2>&1 | tee /tmp/token_extraction.log | tail -1); then
+        # Validate token format (should be JWT or long string)
         if [ -n "$TOKEN" ] && [ ${#TOKEN} -gt 50 ]; then
             save_bearer_token "$TOKEN"
+            
+            # Verify token expiration
+            log_info "Verifying token expiration..."
+            python3 scripts/check_jwt_expiry.py "$TOKEN" --verbose > /tmp/jwt_check.json 2>&1 || true
+            
             return 0
         fi
     fi
