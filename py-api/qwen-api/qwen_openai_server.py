@@ -2,19 +2,25 @@
 """
 OpenAI-Compatible API Server for Qwen
 Proxies OpenAI format requests to Qwen API
+
+Features:
+- Accepts ANY API key (always uses server's stored token)
+- Maps unknown models to GLM-4.6 (default)
+- Supports all existing Qwen models
+- Works with any OpenAI-compatible client
 """
 
 import os
 import sys
 import json
 import asyncio
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Union
 from datetime import datetime
 
 import uvicorn
-from fastapi import FastAPI, HTTPException, Header
+from fastapi import FastAPI, HTTPException, Header, Request
 from fastapi.responses import JSONResponse, StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import httpx
 
 
@@ -23,6 +29,41 @@ QWEN_TOKEN = os.getenv("QWEN_BEARER_TOKEN")
 QWEN_API_BASE = "https://qwen.aikit.club/v1"
 HOST = os.getenv("HOST", "0.0.0.0")
 PORT = int(os.getenv("PORT", "7050"))
+
+# Model mapping - map any unknown model to default
+DEFAULT_MODEL = "GLM-4.6"
+VALID_QWEN_MODELS = {
+    "qwen-max-latest": "qwen-max-latest",
+    "qwen-plus-latest": "qwen-plus-latest", 
+    "qwen-turbo-latest": "qwen-turbo-latest",
+    "glm-4.6": "GLM-4.6",
+    "glm-4.5v": "GLM-4.5V",
+    "glm-4.5-v": "GLM-4.5V",
+    # Add more as needed
+}
+
+
+# Helper function to map model names
+def map_model_name(model: Optional[str]) -> str:
+    """
+    Map any model name to a valid Qwen model.
+    - If model is None or empty, use DEFAULT_MODEL
+    - If model exists in VALID_QWEN_MODELS, use it
+    - Otherwise, use DEFAULT_MODEL
+    """
+    if not model:
+        return DEFAULT_MODEL
+    
+    # Normalize model name (lowercase, remove spaces)
+    normalized = model.lower().strip().replace(" ", "-")
+    
+    # Check if it's a known Qwen model
+    if normalized in VALID_QWEN_MODELS:
+        return VALID_QWEN_MODELS[normalized]
+    
+    # Default fallback
+    print(f"⚠️  Unknown model '{model}', using default: {DEFAULT_MODEL}", file=sys.stderr)
+    return DEFAULT_MODEL
 
 
 # Pydantic models for OpenAI compatibility
@@ -131,16 +172,26 @@ async def chat_completions(
 ):
     """
     OpenAI-compatible chat completions endpoint
-    Proxies to Qwen API
-    """
-    # Verify token
-    if not QWEN_TOKEN:
-        raise HTTPException(status_code=500, detail="QWEN_BEARER_TOKEN not set")
     
-    # Use authorization header if provided, otherwise use env token
+    Features:
+    - Accepts ANY API key (ignores it, always uses server's stored token)
+    - Maps unknown models to GLM-4.6 (default Qwen model)
+    - Supports all existing Qwen models (qwen-max, qwen-plus, etc.)
+    - Full OpenAI API compatibility
+    """
+    # ALWAYS use server's stored token - ignore user's API key
+    # This allows: api_key="sk-anything", api_key="random123", etc.
+    if not QWEN_TOKEN:
+        raise HTTPException(
+            status_code=500, 
+            detail="Server error: QWEN_BEARER_TOKEN not configured"
+        )
+    
     token = QWEN_TOKEN
-    if authorization and authorization.startswith("Bearer "):
-        token = authorization.replace("Bearer ", "")
+    
+    # Map model name to valid Qwen model
+    mapped_model = map_model_name(request.model)
+    print(f"🎯 Model mapping: '{request.model or 'none'}' → '{mapped_model}'", file=sys.stderr)
     
     # Convert OpenAI format to Qwen format
     qwen_messages = []
@@ -206,6 +257,8 @@ async def chat_completions(
             # Qwen response might already be in OpenAI format
             # If not, convert it
             if "choices" in qwen_response:
+                # Ensure the response includes the mapped model name
+                qwen_response["model"] = mapped_model
                 return qwen_response
             
             # Otherwise construct OpenAI format response
@@ -213,7 +266,7 @@ async def chat_completions(
                 "id": f"chatcmpl-{int(datetime.now().timestamp())}",
                 "object": "chat.completion",
                 "created": int(datetime.now().timestamp()),
-                "model": request.model,
+                "model": mapped_model,  # Return the actual model used
                 "choices": [{
                     "index": 0,
                     "message": {
@@ -234,6 +287,45 @@ async def chat_completions(
     except Exception as e:
         print(f"❌ Error: {e}", file=sys.stderr)
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/v1/responses")
+@app.post("/v1/completions")
+async def generic_completions(
+    request: Request,
+    authorization: Optional[str] = Header(None)
+):
+    """
+    Catch-all for other OpenAI-compatible endpoints
+    Redirects to chat completions with model mapping
+    """
+    body = await request.json()
+    
+    # Extract message from various possible formats
+    message_content = None
+    if "input" in body:
+        message_content = body["input"]
+    elif "prompt" in body:
+        message_content = body["prompt"]
+    elif "messages" in body:
+        # Already in chat format, forward to chat completions
+        return await chat_completions(
+            ChatRequest(**body),
+            authorization=authorization
+        )
+    
+    if not message_content:
+        raise HTTPException(status_code=400, detail="No input/prompt/messages provided")
+    
+    # Convert to chat completion format
+    chat_request = ChatRequest(
+        model=body.get("model"),
+        messages=[Message(role="user", content=message_content)],
+        temperature=body.get("temperature", 0.7),
+        stream=body.get("stream", False)
+    )
+    
+    return await chat_completions(chat_request, authorization=authorization)
 
 
 def main():
