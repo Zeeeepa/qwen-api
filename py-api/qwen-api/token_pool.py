@@ -13,7 +13,7 @@ from typing import Dict, List, Optional
 
 import httpx
 
-from app.utils.logger import logger
+from logger import logger
 
 
 @dataclass

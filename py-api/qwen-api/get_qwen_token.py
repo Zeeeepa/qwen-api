@@ -6,20 +6,21 @@ This is a convenience wrapper around qwen_token_real.py
 
 import sys
 import os
+import asyncio
 from pathlib import Path
 
 # Import the actual implementation
 try:
-    from qwen_token_real import extract_token_with_playwright
+    from qwen_token_real import extract_qwen_token
 except ImportError:
     # If running as script, add current directory to path
     sys.path.insert(0, str(Path(__file__).parent))
-    from qwen_token_real import extract_token_with_playwright
+    from qwen_token_real import extract_qwen_token
 
 
-def main():
+async def main_async():
     """
-    Main function to extract Qwen token.
+    Main async function to extract Qwen token.
     
     Requires QWEN_EMAIL and QWEN_PASSWORD environment variables.
     """
@@ -36,8 +37,8 @@ def main():
         sys.exit(1)
     
     try:
-        # Extract token
-        token = extract_token_with_playwright(email, password)
+        # Extract token (async call)
+        token = await extract_qwen_token(email, password)
         
         if token:
             # Output only the token to stdout (for piping)
@@ -52,6 +53,10 @@ def main():
         sys.exit(1)
 
 
+def main():
+    """Entry point that runs the async main function"""
+    asyncio.run(main_async())
+
+
 if __name__ == '__main__':
     main()
-

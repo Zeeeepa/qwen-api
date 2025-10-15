@@ -12,8 +12,8 @@ import asyncio
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional
 
-from app.auth.session_store import SessionStore
-from app.utils.logger import get_logger
+from session_store import SessionStore
+from logger import get_logger
 
 logger = get_logger()
 

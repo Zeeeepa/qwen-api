@@ -18,7 +18,7 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from typing import Any, Dict, Optional
 
-from app.utils.logger import get_logger
+from logger import get_logger
 
 logger = get_logger()
 
@@ -354,4 +354,3 @@ async def initialize_request_tracker():
     tracker.start()
     logger.info("✅ Request Tracker: Initialized")
     return tracker
-

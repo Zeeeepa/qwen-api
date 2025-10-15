@@ -8,8 +8,8 @@ from typing import Any, Dict, List
 from fastapi import APIRouter, Header, HTTPException
 from fastapi.responses import JSONResponse, StreamingResponse
 
-from app.core.config import settings
-from app.models.schemas import (
+from config import settings
+from schemas import (
     Choice,
     Message,
     Model,
@@ -18,9 +18,9 @@ from app.models.schemas import (
     OpenAIResponse,
     Usage,
 )
-from app.providers import get_provider_router
-from app.utils.logger import get_logger
-from app.utils.token_pool import get_token_pool
+from provider_factory import get_provider_router
+from logger import get_logger
+from token_pool import get_token_pool
 
 logger = get_logger()
 router = APIRouter()
@@ -277,7 +277,7 @@ async def trigger_health_check():
 async def update_token_pool_endpoint(tokens: List[str]):
     """动态更新token池"""
     try:
-        from app.utils.token_pool import update_token_pool
+        from token_pool import update_token_pool
 
         valid_tokens = [token.strip() for token in tokens if token.strip()]
         if not valid_tokens:

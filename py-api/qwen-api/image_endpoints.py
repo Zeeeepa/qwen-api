@@ -11,9 +11,9 @@ from fastapi import APIRouter, Header, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from app.core.config import settings
-from app.providers import get_provider_router
-from app.utils.logger import get_logger
+from config import settings
+from provider_factory import get_provider_router
+from logger import get_logger
 
 logger = get_logger()
 router = APIRouter()

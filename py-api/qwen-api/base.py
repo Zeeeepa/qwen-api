@@ -12,8 +12,8 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Any, AsyncGenerator, Dict, List, Optional, Union
 
-from app.models.schemas import OpenAIRequest
-from app.utils.logger import get_logger
+from schemas import OpenAIRequest
+from logger import get_logger
 
 logger = get_logger()
 
