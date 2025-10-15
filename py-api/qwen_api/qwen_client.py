@@ -6,8 +6,8 @@ Handles actual API calls to Qwen backend
 
 from typing import Dict, Any, Optional
 import httpx
-from .config_loader import settings
-from .logging_config import logger
+from config_loader import settings
+from logging_config import logger
 
 
 class QwenClient:

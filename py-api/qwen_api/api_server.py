@@ -11,11 +11,11 @@ from fastapi import FastAPI, HTTPException, Header, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from .config_loader import settings
-from .logging_config import logger
-from .model_mapper import map_model_name, list_available_models
-from .request_normalizer import normalize_messages
-from .qwen_client import QwenClient
+from config_loader import settings
+from logging_config import logger
+from model_mapper import map_model_name, list_available_models
+from request_normalizer import normalize_messages
+from qwen_client import QwenClient
 
 
 # Pydantic models for OpenAI compatibility with enhanced documentation

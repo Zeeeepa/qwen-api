@@ -5,8 +5,8 @@ Maps any model name to valid Qwen models
 """
 
 from typing import Optional
-from .config_loader import settings
-from .logging_config import logger
+from config_loader import settings
+from logging_config import logger
 
 
 # Valid Qwen models registry

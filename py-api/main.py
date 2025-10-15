@@ -6,9 +6,11 @@ Replaces old start.py with clean modular architecture
 
 import sys
 import uvicorn
+from pathlib import Path
 
-# Import from qwen-api package
-sys.path.insert(0, "qwen-api")
+# Add qwen_api package to path
+QWEN_API_DIR = Path(__file__).parent / "qwen_api"
+sys.path.insert(0, str(QWEN_API_DIR))
 
 from config_loader import settings
 from logging_config import logger
@@ -42,4 +44,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
