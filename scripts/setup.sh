@@ -139,13 +139,13 @@ install_dependencies() {
     log_step "4/8" "Installing Python dependencies..."
     
     # Check if requirements.txt exists
-    if [ ! -f "requirements.txt" ]; then
-        log_error "requirements.txt not found!"
+    if [ ! -f "py-api/requirements.txt" ]; then
+        log_error "py-api/requirements.txt not found!"
         exit 1
     fi
     
-    log_info "Installing from requirements.txt..."
-    if uv pip install -r requirements.txt; then
+    log_info "Installing from py-api/requirements.txt..."
+    if uv pip install -r py-api/requirements.txt; then
         log_success "Main dependencies installed"
     else
         log_error "Failed to install main dependencies"
@@ -533,7 +533,7 @@ main() {
     print_header
     
     # Check if we're in the right directory
-    if [ ! -f "requirements.txt" ] && [ ! -f "main.py" ]; then
+    if [ ! -f "start.py" ] && [ ! -d "py-api" ]; then
         log_error "Please run this script from the project root directory"
         exit 1
     fi
