@@ -7,6 +7,13 @@ Centralized configuration management for Qwen API
 import os
 from typing import Optional
 from dataclasses import dataclass
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Load .env file from project root
+env_file = Path(__file__).parent.parent.parent / ".env"
+if env_file.exists():
+    load_dotenv(env_file)
 
 
 @dataclass
@@ -36,4 +43,3 @@ class Settings:
 
 # Global settings instance
 settings = Settings()
-

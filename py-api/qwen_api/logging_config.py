@@ -6,7 +6,7 @@ Centralized logging setup with quiet defaults
 
 import logging
 import sys
-from .config_loader import settings
+from config_loader import settings
 
 
 def setup_logging():
@@ -51,4 +51,3 @@ def setup_logging():
 
 # Initialize logger
 logger = setup_logging()
-
