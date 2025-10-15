@@ -27,6 +27,7 @@ readonly NC='\033[0m'
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 readonly ENV_FILE="${PROJECT_ROOT}/.env"
+readonly VENV_ACTIVATE="${PROJECT_ROOT}/.venv/bin/activate"
 
 # Test configuration
 readonly DEFAULT_PORT=8096
@@ -38,6 +39,11 @@ PASSED_TESTS=0
 FAILED_TESTS=0
 
 cd "$PROJECT_ROOT"
+
+# Activate virtual environment if it exists
+if [ -f "$VENV_ACTIVATE" ]; then
+    source "$VENV_ACTIVATE"
+fi
 
 ################################################################################
 # Utility Functions
