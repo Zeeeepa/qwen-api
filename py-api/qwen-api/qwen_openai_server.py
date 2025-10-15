@@ -31,15 +31,27 @@ HOST = os.getenv("HOST", "0.0.0.0")
 PORT = int(os.getenv("PORT", "7050"))
 
 # Model mapping - map any unknown model to default
-DEFAULT_MODEL = "qwen-turbo-latest"
+DEFAULT_MODEL = "qwen3-max"  # Best general-purpose model
 VALID_QWEN_MODELS = {
-    "qwen-max-latest": "qwen-max-latest",
-    "qwen-plus-latest": "qwen-plus-latest", 
-    "qwen-turbo-latest": "qwen-turbo-latest",
-    "qwen-max": "qwen-max-latest",
-    "qwen-plus": "qwen-plus-latest",
-    "qwen-turbo": "qwen-turbo-latest",
-    # Add more as needed
+    # Qwen 3.x models
+    "qwen3-max": "qwen3-max",
+    "qwen3-vl-plus": "qwen3-vl-plus",
+    "qwen3-coder-plus": "qwen3-coder-plus",
+    "qwen3-vl-30b-a3b": "qwen3-vl-30b-a3b",
+    
+    # Qwen 2.5 models
+    "qwen2.5-vl-32b-instruct": "qwen2.5-vl-32b-instruct",
+    "qwen2.5-14b-instruct-1m": "qwen2.5-14b-instruct-1m",
+    "qwen2.5-coder-32b-instruct": "qwen2.5-coder-32b-instruct",
+    "qwen2.5-72b-instruct": "qwen2.5-72b-instruct",
+    
+    # Legacy aliases (map to qwen3-max)
+    "qwen-max-latest": "qwen3-max",
+    "qwen-plus-latest": "qwen3-max", 
+    "qwen-turbo-latest": "qwen3-max",
+    "qwen-max": "qwen3-max",
+    "qwen-plus": "qwen3-max",
+    "qwen-turbo": "qwen3-max",
 }
 
 
@@ -143,19 +155,31 @@ async def list_models():
     """List available models (OpenAI compatible)"""
     models = [
         {
-            "id": "qwen-max-latest",
+            "id": "qwen3-max",
             "object": "model",
             "created": int(datetime.now().timestamp()),
             "owned_by": "qwen"
         },
         {
-            "id": "qwen-plus-latest",
+            "id": "qwen3-vl-plus",
             "object": "model",
             "created": int(datetime.now().timestamp()),
             "owned_by": "qwen"
         },
         {
-            "id": "qwen-turbo-latest",
+            "id": "qwen3-coder-plus",
+            "object": "model",
+            "created": int(datetime.now().timestamp()),
+            "owned_by": "qwen"
+        },
+        {
+            "id": "qwen2.5-72b-instruct",
+            "object": "model",
+            "created": int(datetime.now().timestamp()),
+            "owned_by": "qwen"
+        },
+        {
+            "id": "qwen2.5-coder-32b-instruct",
             "object": "model",
             "created": int(datetime.now().timestamp()),
             "owned_by": "qwen"
@@ -227,8 +251,9 @@ async def chat_completions(
     
     print(f"📝 Normalized messages: {len(qwen_messages)} message(s)", file=sys.stderr)
     
-    # Build Qwen request - IMPORTANT: Don't send model field to Qwen API
+    # Build Qwen request - IMPORTANT: Must include the mapped model field
     qwen_request = {
+        "model": mapped_model,  # Use the mapped model name
         "messages": qwen_messages,
         "stream": request.stream,
     }
