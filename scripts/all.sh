@@ -28,6 +28,10 @@ readonly PID_FILE="${PROJECT_ROOT}/server.pid"
 readonly ENV_FILE="${PROJECT_ROOT}/.env"
 readonly LOGS_DIR="${PROJECT_ROOT}/logs"
 
+# Server configuration
+export SERVER_PORT="${SERVER_PORT:-${PORT:-7000}}"
+export LISTEN_PORT="$SERVER_PORT"
+
 cd "$PROJECT_ROOT"
 
 ################################################################################
@@ -361,6 +365,68 @@ PYTHON_EOF
     echo ""
 }
 
+run_auto_test() {
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${YELLOW}🧪 Running Automatic Test Request...${NC}"
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo ""
+    
+    python3 << EOF
+from openai import OpenAI
+
+client = OpenAI(
+    api_key="sk-any",
+    base_url="http://localhost:$SERVER_PORT/v1"
+)
+
+try:
+    result = client.chat.completions.create(
+        model="gpt-5",
+        messages=[{"role": "user", "content": "Write a haiku about code."}]
+    )
+    
+    print("✅ Test Response:")
+    print("─" * 50)
+    print(result.choices[0].message.content)
+    print("─" * 50)
+except Exception as e:
+    print(f"❌ Test failed: {e}")
+EOF
+    
+    echo ""
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${GREEN}📊 Server Information${NC}"
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo ""
+    echo -e "${GREEN}🌐 Server Port: $SERVER_PORT${NC}"
+    echo -e "${GREEN}📍 Base URL: http://localhost:$SERVER_PORT${NC}"
+    echo ""
+    
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${YELLOW}📋 Available Model Names${NC}"
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo ""
+    echo -e "${GREEN}✨ ANY model name works! All map to qwen3-max (best Qwen model)${NC}"
+    echo ""
+    echo "Examples that work:"
+    echo "  • gpt-5, gpt-4, gpt-4-turbo, gpt-3.5-turbo"
+    echo "  • GLM-4.5V, glm-4-plus"
+    echo "  • claude-3, claude-3-opus, claude-3-sonnet"
+    echo "  • o1, o1-mini, o1-preview"
+    echo "  • gemini-pro, gemini-1.5-pro"
+    echo "  • Any random name you want!"
+    echo ""
+    echo "Actual Qwen models (use specific features):"
+    echo "  • qwen3-max             - Best general-purpose model"
+    echo "  • qwen3-vl-plus         - Vision + Language model"
+    echo "  • qwen3-coder-plus      - Best for coding tasks"
+    echo "  • qwen2.5-72b-instruct  - Large instruction model"
+    echo "  • qwen2.5-coder-32b-instruct - Coding specialist"
+    echo ""
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo ""
+}
+
 watch_logs() {
     echo -e "${CYAN}${BOLD}Server is running in background...${NC}"
     echo -e "${YELLOW}Press Ctrl+C to stop watching logs (server will keep running)${NC}"
@@ -428,6 +494,9 @@ main() {
     print_server_info
     print_useful_commands
     print_api_examples
+    
+    # Run automatic test
+    run_auto_test
     
     # Handle test results and offer log watching
     if [[ $test_result -eq 0 ]]; then
