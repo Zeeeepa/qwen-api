@@ -1,0 +1,97 @@
+{
+  "total_tests": 15,
+  "passed": 2,
+  "failed": 13,
+  "tests": [
+    {
+      "name": "GET /",
+      "status": "PASS",
+      "details": "Status: 200",
+      "timestamp": "2025-10-15T16:04:12.690326"
+    },
+    {
+      "name": "GET /v1/models",
+      "status": "PASS",
+      "details": "Status: 200",
+      "timestamp": "2025-10-15T16:04:12.692630"
+    },
+    {
+      "name": "POST /v1/chat/completions",
+      "status": "FAIL",
+      "details": "Status: 500",
+      "timestamp": "2025-10-15T16:04:14.227366"
+    },
+    {
+      "name": "POST /v1/chat/completions",
+      "status": "FAIL",
+      "details": "Status: 500",
+      "timestamp": "2025-10-15T16:04:15.579147"
+    },
+    {
+      "name": "POST /v1/chat/completions",
+      "status": "FAIL",
+      "details": "Status: 500",
+      "timestamp": "2025-10-15T16:04:17.181254"
+    },
+    {
+      "name": "POST /v1/chat/completions (streaming)",
+      "status": "FAIL",
+      "details": "Status: 500",
+      "timestamp": "2025-10-15T16:04:18.755296"
+    },
+    {
+      "name": "POST /v1/chat/completions",
+      "status": "FAIL",
+      "details": "Status: 500",
+      "timestamp": "2025-10-15T16:04:20.215116"
+    },
+    {
+      "name": "POST /v1/chat/completions",
+      "status": "FAIL",
+      "details": "Status: 500",
+      "timestamp": "2025-10-15T16:04:21.947383"
+    },
+    {
+      "name": "POST /v1/chat/completions",
+      "status": "FAIL",
+      "details": "Status: 500",
+      "timestamp": "2025-10-15T16:04:22.340605"
+    },
+    {
+      "name": "POST /v1/chat/completions",
+      "status": "FAIL",
+      "details": "Status: 500",
+      "timestamp": "2025-10-15T16:04:23.841119"
+    },
+    {
+      "name": "POST /v1/chat/completions",
+      "status": "FAIL",
+      "details": "Status: 500",
+      "timestamp": "2025-10-15T16:04:25.011837"
+    },
+    {
+      "name": "POST /v1/chat/completions",
+      "status": "FAIL",
+      "details": "Status: 500",
+      "timestamp": "2025-10-15T16:04:25.833232"
+    },
+    {
+      "name": "POST /v1/chat/completions",
+      "status": "FAIL",
+      "details": "Status: 500",
+      "timestamp": "2025-10-15T16:04:27.527570"
+    },
+    {
+      "name": "POST /v1/chat/completions",
+      "status": "FAIL",
+      "details": "Status: 500",
+      "timestamp": "2025-10-15T16:04:27.923229"
+    },
+    {
+      "name": "POST /v1/chat/completions",
+      "status": "FAIL",
+      "details": "Status: 500",
+      "timestamp": "2025-10-15T16:04:28.330895"
+    }
+  ]
+}

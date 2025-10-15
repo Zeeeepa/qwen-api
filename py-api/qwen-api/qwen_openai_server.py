@@ -32,11 +32,15 @@ class Message(BaseModel):
 
 
 class ChatRequest(BaseModel):
-    model: str
+    model: Optional[str] = None  # Optional - Qwen API doesn't require it
     messages: List[Message]
     temperature: Optional[float] = 0.7
-    max_tokens: Optional[int] = 2000
+    max_tokens: Optional[int] = None
     stream: Optional[bool] = False
+    enable_thinking: Optional[bool] = False
+    thinking_budget: Optional[int] = None
+    tools: Optional[List[Dict[str, Any]]] = None
+    tool_choice: Optional[str] = None
 
 
 class ChatChoice(BaseModel):
@@ -146,12 +150,25 @@ async def chat_completions(
             "content": msg.content
         })
     
+    # Build Qwen request - IMPORTANT: Don't send model field to Qwen API
     qwen_request = {
-        "model": request.model,
         "messages": qwen_messages,
-        "temperature": request.temperature,
-        "max_tokens": request.max_tokens,
+        "stream": request.stream,
     }
+    
+    # Only add optional fields if they are provided
+    if request.temperature is not None:
+        qwen_request["temperature"] = request.temperature
+    if request.max_tokens is not None:
+        qwen_request["max_tokens"] = request.max_tokens
+    if request.enable_thinking:
+        qwen_request["enable_thinking"] = request.enable_thinking
+    if request.thinking_budget is not None:
+        qwen_request["thinking_budget"] = request.thinking_budget
+    if request.tools is not None:
+        qwen_request["tools"] = request.tools
+    if request.tool_choice is not None:
+        qwen_request["tool_choice"] = request.tool_choice
     
     # Call Qwen API
     try:
@@ -164,8 +181,8 @@ async def chat_completions(
             url = f"{QWEN_API_BASE}/chat/completions"
             
             print(f"📤 Sending request to Qwen API: {url}", file=sys.stderr)
-            print(f"   Model: {request.model}", file=sys.stderr)
             print(f"   Messages: {len(qwen_messages)}", file=sys.stderr)
+            print(f"   Request payload: {json.dumps(qwen_request, indent=2)}", file=sys.stderr)
             
             response = await client.post(
                 url,
