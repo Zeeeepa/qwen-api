@@ -111,8 +111,8 @@ trap cleanup_on_exit EXIT
 ################################################################################
 
 check_project_root() {
-    if [[ ! -f "main.py" ]]; then
-        log_error "main.py not found!"
+    if [[ ! -f "start.py" ]]; then
+        log_error "start.py not found!"
         log_warning "Please run this script from the project root directory"
         echo ""
         exit 1
