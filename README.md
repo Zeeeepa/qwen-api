@@ -40,7 +40,7 @@ export QWEN_PASSWORD="yourpassword"
 Run everything at once:
 
 ```bash
-bash all.sh
+bash scripts/all.sh
 ```
 
 This will:
@@ -54,7 +54,7 @@ This will:
 #### 1. Extract Token (`setup.sh`)
 
 ```bash
-bash setup.sh
+bash scripts/setup.sh
 ```
 
 **What it does:**
@@ -76,7 +76,7 @@ bash setup.sh
 #### 2. Start Server (`start.sh`)
 
 ```bash
-bash start.sh
+bash scripts/start.sh
 ```
 
 **What it does:**
@@ -101,13 +101,13 @@ bash start.sh
 
 ```bash
 # Default test message
-bash send_request.sh
+bash scripts/send_request.sh
 
 # Custom model and message
-bash send_request.sh "qwen-plus-latest" "Explain quantum computing"
+bash scripts/send_request.sh "qwen-plus-latest" "Explain quantum computing"
 
 # Verbose mode (shows full JSON)
-VERBOSE=1 bash send_request.sh
+VERBOSE=1 bash scripts/send_request.sh
 ```
 
 **What it does:**
@@ -132,11 +132,11 @@ Of course! Please provide the code you're working on...
 #### 4. Run Everything (`all.sh`)
 
 ```bash
-bash all.sh
+bash scripts/all.sh
 ```
 
 **What it does:**
-- Runs setup.sh
+- Runs scripts/setup.sh
 - Starts server in background
 - Sends multiple test requests
 - Asks if you want to keep server running
@@ -389,23 +389,23 @@ export QWEN_EMAIL="your@email.com"
 export QWEN_PASSWORD="yourpassword"
 ```
 
-### "Token expired! Please run: bash setup.sh"
+### "Token expired! Please run: bash scripts/setup.sh"
 
 **Solution:** Your JWT token has expired (7-day validity). Re-run setup:
 ```bash
-bash setup.sh
+bash scripts/setup.sh
 ```
 
 ### "Server not running!"
 
 **Solution:** Start the server first:
 ```bash
-bash start.sh
+bash scripts/start.sh
 ```
 
 Or run everything:
 ```bash
-bash all.sh
+bash scripts/all.sh
 ```
 
 ### "Address already in use" (Port 7050)
@@ -417,7 +417,7 @@ lsof -ti:7050 | xargs kill -9
 
 Or use a different port:
 ```bash
-PORT=8080 bash start.sh
+PORT=8080 bash scripts/start.sh
 ```
 
 ### Token extraction fails
@@ -581,4 +581,3 @@ This project is open source. See LICENSE file for details.
 **Made with ❤️ for the Qwen community**
 
 🌟 **Star this repo if it helped you!**
-
