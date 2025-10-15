@@ -49,6 +49,13 @@ echo "║   Qwen API Complete Workflow Runner    ║"
 echo "╚════════════════════════════════════════╝"
 echo ""
 
+# Check if venv exists, if not run install
+if [ ! -d "$ROOT_DIR/venv" ]; then
+    log_step "0" "Installing dependencies and creating virtual environment..."
+    bash "$SCRIPT_DIR/install.sh"
+    echo ""
+fi
+
 #############################################
 # STEP 1: Setup
 #############################################
@@ -180,4 +187,3 @@ else
 fi
 
 log_info "✅ All done!"
-

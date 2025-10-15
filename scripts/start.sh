@@ -23,9 +23,22 @@ log_error() { echo -e "${RED}[ERROR]${NC} $1" >&2; }
 # Get script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(dirname "$SCRIPT_DIR")"
-PY_API_DIR="$ROOT_DIR/py-api/qwen-api"
+PY_API_DIR="$ROOT_DIR/py-api"
+VENV_DIR="$ROOT_DIR/venv"
 
 PORT=${PORT:-7050}
+
+# Check if virtual environment exists
+if [ ! -d "$VENV_DIR" ]; then
+    log_error "Virtual environment not found!"
+    echo ""
+    echo "Please run first: bash scripts/install.sh"
+    exit 1
+fi
+
+# Activate virtual environment
+log_info "Activating virtual environment..."
+source "$VENV_DIR/bin/activate"
 
 # Load .env
 if [ ! -f "$ROOT_DIR/.env" ]; then
@@ -45,7 +58,7 @@ log_info "Token loaded: ${QWEN_BEARER_TOKEN:0:20}..."
 
 # Check token expiration
 log_info "Checking token expiration..."
-if ! python3 "$PY_API_DIR/check_jwt_expiry.py" "$QWEN_BEARER_TOKEN" >/dev/null 2>&1; then
+if ! python "$PY_API_DIR/qwen-api/check_jwt_expiry.py" "$QWEN_BEARER_TOKEN" >/dev/null 2>&1; then
     log_error "Token expired! Please run: bash $SCRIPT_DIR/setup.sh"
     exit 1
 fi
@@ -53,10 +66,10 @@ log_info "✅ Token valid"
 
 # Validate schemas
 log_info "Validating qwen.json..."
-python3 "$PY_API_DIR/validate_json.py" "$ROOT_DIR/qwen.json" >/dev/null 2>&1 || true
+python "$PY_API_DIR/qwen-api/validate_json.py" "$ROOT_DIR/qwen.json" >/dev/null 2>&1 || true
 
 log_info "Validating openapi.json..."
-python3 "$PY_API_DIR/validate_json.py" "$ROOT_DIR/openapi.json" >/dev/null 2>&1 || true
+python "$PY_API_DIR/qwen-api/validate_json.py" "$ROOT_DIR/openapi.json" >/dev/null 2>&1 || true
 
 # Export paths
 export QWEN_JSON_PATH="$ROOT_DIR/qwen.json"
@@ -73,6 +86,6 @@ log_info "   Models: http://localhost:$PORT/v1/models"
 log_info "   Chat:   http://localhost:$PORT/v1/chat/completions"
 echo ""
 
-# Start server
-cd "$PY_API_DIR" && python3 start.py
-
+# Start server using the installed qwen-api command or direct python
+log_info "Starting server..."
+cd "$PY_API_DIR" && python start.py

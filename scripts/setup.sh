@@ -25,6 +25,19 @@ log_error() { echo -e "${RED}[ERROR]${NC} $1" >&2; }
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(dirname "$SCRIPT_DIR")"
 PY_API_DIR="$ROOT_DIR/py-api/qwen-api"
+VENV_DIR="$ROOT_DIR/venv"
+
+# Check if virtual environment exists
+if [ ! -d "$VENV_DIR" ]; then
+    log_error "Virtual environment not found!"
+    echo ""
+    echo "Please run first: bash scripts/install.sh"
+    exit 1
+fi
+
+# Activate virtual environment
+log_info "Activating virtual environment..."
+source "$VENV_DIR/bin/activate"
 
 # Check environment variables
 if [ -z "$QWEN_EMAIL" ] || [ -z "$QWEN_PASSWORD" ]; then
@@ -37,11 +50,7 @@ if [ -z "$QWEN_EMAIL" ] || [ -z "$QWEN_PASSWORD" ]; then
     exit 1
 fi
 
-log_info "Checking dependencies..."
-
-# Install Python dependencies
-pip3 install -q playwright httpx jsonschema python-jose || true
-playwright install chromium --with-deps >/dev/null 2>&1 || true
+log_info "Dependencies already installed in virtual environment"
 
 # Check if token already exists and is valid
 if [ -f "$ROOT_DIR/.env" ]; then
@@ -78,4 +87,3 @@ log_info "Validating token..."
 python3 "$PY_API_DIR/check_jwt_expiry.py" "$TOKEN"
 
 log_info "✅ Setup complete!"
-
