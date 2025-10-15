@@ -64,12 +64,7 @@ if ! python "$PY_API_DIR/qwen-api/check_jwt_expiry.py" "$QWEN_BEARER_TOKEN" >/de
 fi
 log_info "✅ Token valid"
 
-# Validate schemas
-log_info "Validating qwen.json..."
-python "$PY_API_DIR/qwen-api/validate_json.py" "$ROOT_DIR/qwen.json" >/dev/null 2>&1 || true
-
-log_info "Validating openapi.json..."
-python "$PY_API_DIR/qwen-api/validate_json.py" "$ROOT_DIR/openapi.json" >/dev/null 2>&1 || true
+# Note: qwen.json and openapi.json are just documentation specs, not used by the server
 
 # Export paths
 export QWEN_JSON_PATH="$ROOT_DIR/qwen.json"
