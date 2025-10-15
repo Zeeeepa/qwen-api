@@ -56,7 +56,7 @@ setup(
     },
     entry_points={
         "console_scripts": [
-            "qwen-api=qwen-api.start:main",
+            "qwen-api=start:main",
             "qwen-token=qwen-api.get_qwen_token:main",
             "qwen-validate=qwen-api.validate_json:main",
             "qwen-check-token=qwen-api.check_jwt_expiry:main",
@@ -65,4 +65,3 @@ setup(
     include_package_data=True,
     zip_safe=False,
 )
-

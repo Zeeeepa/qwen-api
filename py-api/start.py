@@ -7,13 +7,26 @@ import sys
 import os
 from pathlib import Path
 
-# Import the server
+# Import the server from qwen-api package
 try:
-    from qwen_openai_server import app, HOST, PORT
+    from qwen-api.qwen_openai_server import app, HOST, PORT
 except ImportError:
-    # If running as script, add current directory to path
+    # If running as script, add parent directory to path
     sys.path.insert(0, str(Path(__file__).parent))
-    from qwen_openai_server import app, HOST, PORT
+    try:
+        from qwen-api.qwen_openai_server import app, HOST, PORT
+    except ImportError:
+        # Fallback: try importing from qwen_api (with underscore)
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            "qwen_openai_server",
+            Path(__file__).parent / "qwen-api" / "qwen_openai_server.py"
+        )
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        app = module.app
+        HOST = module.HOST
+        PORT = module.PORT
 
 
 def main():
@@ -43,4 +56,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-

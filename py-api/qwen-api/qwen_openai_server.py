@@ -31,14 +31,14 @@ HOST = os.getenv("HOST", "0.0.0.0")
 PORT = int(os.getenv("PORT", "7050"))
 
 # Model mapping - map any unknown model to default
-DEFAULT_MODEL = "GLM-4.6"
+DEFAULT_MODEL = "qwen-turbo-latest"
 VALID_QWEN_MODELS = {
     "qwen-max-latest": "qwen-max-latest",
     "qwen-plus-latest": "qwen-plus-latest", 
     "qwen-turbo-latest": "qwen-turbo-latest",
-    "glm-4.6": "GLM-4.6",
-    "glm-4.5v": "GLM-4.5V",
-    "glm-4.5-v": "GLM-4.5V",
+    "qwen-max": "qwen-max-latest",
+    "qwen-plus": "qwen-plus-latest",
+    "qwen-turbo": "qwen-turbo-latest",
     # Add more as needed
 }
 
@@ -74,7 +74,10 @@ class Message(BaseModel):
 
 class ChatRequest(BaseModel):
     model: Optional[str] = None  # Optional - Qwen API doesn't require it
-    messages: List[Message]
+    messages: Optional[List[Message]] = None  # Make optional to support alternative formats
+    input: Optional[str] = None  # Alternative format: input field
+    prompt: Optional[str] = None  # Alternative format: prompt field
+    text: Optional[Dict[str, Any]] = None  # Alternative format: text configuration
     temperature: Optional[float] = 0.7
     max_tokens: Optional[int] = None
     stream: Optional[bool] = False
@@ -175,8 +178,8 @@ async def chat_completions(
     
     Features:
     - Accepts ANY API key (ignores it, always uses server's stored token)
-    - Maps unknown models to GLM-4.6 (default Qwen model)
-    - Supports all existing Qwen models (qwen-max, qwen-plus, etc.)
+    - Maps unknown models to qwen-turbo-latest (default Qwen model)
+    - Supports all existing Qwen models (qwen-max, qwen-plus, qwen-turbo)
     - Full OpenAI API compatibility
     """
     # ALWAYS use server's stored token - ignore user's API key
@@ -193,13 +196,36 @@ async def chat_completions(
     mapped_model = map_model_name(request.model)
     print(f"🎯 Model mapping: '{request.model or 'none'}' → '{mapped_model}'", file=sys.stderr)
     
-    # Convert OpenAI format to Qwen format
+    # Normalize request format - handle different OpenAI SDK formats
     qwen_messages = []
-    for msg in request.messages:
+    
+    if request.messages:
+        # Standard format: messages array
+        for msg in request.messages:
+            qwen_messages.append({
+                "role": msg.role,
+                "content": msg.content
+            })
+    elif request.input:
+        # Alternative format: input field (e.g., client.responses.create(input="..."))
         qwen_messages.append({
-            "role": msg.role,
-            "content": msg.content
+            "role": "user",
+            "content": request.input
         })
+    elif request.prompt:
+        # Alternative format: prompt field
+        qwen_messages.append({
+            "role": "user",
+            "content": request.prompt
+        })
+    else:
+        # No valid input provided
+        raise HTTPException(
+            status_code=400,
+            detail="Request must include 'messages', 'input', or 'prompt' field"
+        )
+    
+    print(f"📝 Normalized messages: {len(qwen_messages)} message(s)", file=sys.stderr)
     
     # Build Qwen request - IMPORTANT: Don't send model field to Qwen API
     qwen_request = {
