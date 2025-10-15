@@ -21,6 +21,7 @@ import httpx
 # Load environment variables
 QWEN_TOKEN = os.getenv("QWEN_BEARER_TOKEN")
 QWEN_API_BASE = "https://qwen.aikit.club/v1"
+HOST = os.getenv("HOST", "0.0.0.0")
 PORT = int(os.getenv("PORT", "7050"))
 
 
@@ -240,4 +241,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
