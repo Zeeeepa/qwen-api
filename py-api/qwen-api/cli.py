@@ -8,9 +8,10 @@ import argparse
 import os
 import sys
 
-from app import __version__
-from app.core.config import settings
-from app.utils.logger import get_logger
+__version__ = "1.0.0"
+
+from config import settings
+from logger import get_logger
 
 logger = get_logger()
 

@@ -10,12 +10,12 @@ import time
 from pathlib import Path
 from typing import Any, AsyncGenerator, Dict, List, Optional, Union
 
-from app.core.config import settings
-from app.models.schemas import OpenAIRequest
-from app.providers.base import BaseProvider, ProviderConfig, provider_registry
-from app.providers.qwen_provider import QwenProvider
-from app.providers.qwen_proxy_provider import QwenProxyProvider
-from app.utils.logger import get_logger
+from config import settings
+from schemas import OpenAIRequest
+from base import BaseProvider, ProviderConfig, provider_registry
+from qwen_provider import QwenProvider
+from qwen_proxy_provider import QwenProxyProvider
+from logger import get_logger
 
 logger = get_logger()
 

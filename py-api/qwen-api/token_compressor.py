@@ -9,7 +9,7 @@ import base64
 import gzip
 from typing import Optional
 
-from app.utils.logger import get_logger
+from logger import get_logger
 
 logger = get_logger()
 
@@ -160,4 +160,3 @@ async def validate_token_with_api(compressed_token: str, base_url: str = "https:
     except Exception as e:
         logger.error(f"❌ Token validation error: {e}")
         return False
-

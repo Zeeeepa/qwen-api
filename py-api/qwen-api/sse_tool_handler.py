@@ -17,7 +17,7 @@ import time
 from enum import Enum
 from typing import Any, Dict, Generator
 
-from app.utils.logger import get_logger
+from logger import get_logger
 
 logger = get_logger()
 

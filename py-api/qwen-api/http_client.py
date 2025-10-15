@@ -18,9 +18,9 @@ from typing import AsyncGenerator, Optional
 
 import httpx
 
-from app.utils.flareprox_manager import get_flareprox_manager
-from app.utils.logger import get_logger
-from app.utils.request_tracker import get_request_tracker
+
+from logger import get_logger
+from request_tracker import get_request_tracker
 
 logger = get_logger()
 

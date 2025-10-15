@@ -9,10 +9,10 @@ from typing import Any, AsyncGenerator, Dict, Generator
 
 import httpx
 
-from app.core.config import settings
-from app.utils.logger import get_logger
-from app.utils.token_pool import get_token_pool
-from app.utils.user_agent import get_random_user_agent
+from config import settings
+from logger import get_logger
+from token_pool import get_token_pool
+from user_agent import get_random_user_agent
 
 logger = get_logger()
 

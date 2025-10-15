@@ -27,11 +27,11 @@ from typing import Any, AsyncGenerator, Dict, List, Optional, Union
 
 import httpx
 
-from app.auth.provider_auth import QwenAuth
-from app.core.config import settings
-from app.models.schemas import OpenAIRequest
-from app.providers.base import BaseProvider, ProviderConfig
-from app.utils.logger import get_logger
+from provider_auth import QwenAuth
+from config import settings
+from schemas import OpenAIRequest
+from base import BaseProvider, ProviderConfig
+from logger import get_logger
 
 logger = get_logger()
 

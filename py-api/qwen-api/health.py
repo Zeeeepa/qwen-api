@@ -9,12 +9,12 @@ import time
 import psutil
 from fastapi import APIRouter, Response
 
-from app import __version__
-from app.core.config import settings
-from app.utils.flareprox_manager import get_flareprox_manager
-from app.utils.logger import get_logger
-from app.utils.request_tracker import get_request_tracker
-from app.utils.token_pool import get_token_pool
+__version__ = "1.0.0"
+
+from config import settings
+from logger import get_logger
+from request_tracker import get_request_tracker
+from token_pool import get_token_pool
 
 logger = get_logger()
 router = APIRouter()
@@ -230,4 +230,3 @@ async def debug_info():
     }
 
     return debug_info
-

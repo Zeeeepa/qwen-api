@@ -6,7 +6,7 @@ from typing import Dict, List, Optional
 from pydantic_settings import BaseSettings
 from dotenv import load_dotenv
 
-from app.utils.logger import logger
+from logger import logger
 
 # Load environment variables from .env file
 load_dotenv()

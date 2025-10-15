@@ -11,7 +11,7 @@ from typing import Optional
 
 from playwright.async_api import async_playwright, Page, Browser
 
-from app.utils.logger import get_logger
+from logger import get_logger
 
 logger = get_logger()
 
@@ -174,4 +174,3 @@ if __name__ == "__main__":
             print("❌ Failed to get token")
     
     asyncio.run(main())
-
