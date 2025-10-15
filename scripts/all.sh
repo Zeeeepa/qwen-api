@@ -42,13 +42,13 @@ if [ -z "$QWEN_EMAIL" ] || [ -z "$QWEN_PASSWORD" ]; then
 fi
 
 # Configuration
-PORT="${PORT:-7000}"
+SERVER_PORT="${SERVER_PORT:-${PORT:-7000}}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 echo -e "${YELLOW}📋 Configuration:${NC}"
 echo "   Email: $QWEN_EMAIL"
-echo "   Port: $PORT"
+echo "   Server Port: $SERVER_PORT"
 echo "   Project: $PROJECT_ROOT"
 echo ""
 
@@ -193,7 +193,7 @@ sleep 1
 
 # Start server
 export QWEN_BEARER_TOKEN
-export PORT=$PORT
+export PORT=$SERVER_PORT
 
 if [ -f "py-api/start.py" ]; then
     cd py-api
@@ -228,9 +228,9 @@ echo -e "${GREEN}🎉 Deployment Complete!${NC}"
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""
 echo -e "${BLUE}📡 Server Information:${NC}"
-echo "   URL: http://localhost:$PORT"
-echo "   OpenAI Endpoint: http://localhost:$PORT/v1/chat/completions"
-echo "   Models Endpoint: http://localhost:$PORT/v1/models"
+echo "   URL: http://localhost:$SERVER_PORT"
+echo "   OpenAI Endpoint: http://localhost:$SERVER_PORT/v1/chat/completions"
+echo "   Models Endpoint: http://localhost:$SERVER_PORT/v1/models"
 echo "   PID: $SERVER_PID (saved to server.pid)"
 echo "   Logs: $PROJECT_ROOT/server.log"
 echo ""
@@ -240,7 +240,7 @@ from openai import OpenAI
 
 client = OpenAI(
     api_key=\"sk-any\",
-    base_url=\"http://localhost:$PORT/v1\"
+    base_url=\"http://localhost:$SERVER_PORT/v1\"
 )
 
 result = client.chat.completions.create(
@@ -259,3 +259,74 @@ echo ""
 echo -e "${GREEN}✨ Server is ready! Any API key and model name will work!${NC}"
 echo ""
 
+#############################################
+# Test Request
+#############################################
+echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${YELLOW}🧪 Running Test Request...${NC}"
+echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo ""
+
+python3 << EOF
+from openai import OpenAI
+
+client = OpenAI(
+    api_key="sk-any",
+    base_url="http://localhost:$SERVER_PORT/v1"
+)
+
+try:
+    result = client.chat.completions.create(
+        model="gpt-5",
+        messages=[{"role": "user", "content": "Write a haiku about code."}]
+    )
+    
+    print("✅ Test Response:")
+    print("─" * 50)
+    print(result.choices[0].message.content)
+    print("─" * 50)
+except Exception as e:
+    print(f"❌ Test failed: {e}")
+EOF
+
+echo ""
+
+#############################################
+# Display Server Info
+#############################################
+echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${GREEN}📊 Server Information${NC}"
+echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo ""
+echo -e "${GREEN}🌐 Server Port: $SERVER_PORT${NC}"
+echo -e "${GREEN}📍 Base URL: http://localhost:$SERVER_PORT${NC}"
+echo ""
+
+#############################################
+# Available Models
+#############################################
+echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${YELLOW}📋 Available Model Names${NC}"
+echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo ""
+echo -e "${GREEN}✨ ANY model name works! All map to qwen3-max (best Qwen model)${NC}"
+echo ""
+echo "Examples that work:"
+echo "  • gpt-5, gpt-4, gpt-4-turbo, gpt-3.5-turbo"
+echo "  • GLM-4.5V, glm-4-plus"
+echo "  • claude-3, claude-3-opus, claude-3-sonnet"
+echo "  • o1, o1-mini, o1-preview"
+echo "  • gemini-pro, gemini-1.5-pro"
+echo "  • Any random name you want!"
+echo ""
+echo "Actual Qwen models (use specific features):"
+echo "  • qwen3-max             - Best general-purpose model"
+echo "  • qwen3-vl-plus         - Vision + Language model"
+echo "  • qwen3-coder-plus      - Best for coding tasks"
+echo "  • qwen2.5-72b-instruct  - Large instruction model"
+echo "  • qwen2.5-coder-32b-instruct - Coding specialist"
+echo ""
+echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo ""
+echo -e "${GREEN}✅ Deployment Complete! Server running on port $SERVER_PORT${NC}"
+echo ""
