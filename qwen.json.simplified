@@ -1,0 +1,246 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Qwen API Schemas",
+  "description": "JSON schemas for Qwen chat completion API requests and responses",
+  "definitions": {
+    "message": {
+      "type": "object",
+      "required": ["role", "content"],
+      "properties": {
+        "role": {
+          "type": "string",
+          "enum": ["system", "user", "assistant"],
+          "description": "The role of the message author"
+        },
+        "content": {
+          "type": "string",
+          "description": "The content of the message"
+        }
+      }
+    },
+    "chatRequest": {
+      "type": "object",
+      "required": ["model", "messages"],
+      "properties": {
+        "model": {
+          "type": "string",
+          "enum": [
+            "qwen-max-latest",
+            "qwen-plus-latest",
+            "qwen-turbo-latest"
+          ],
+          "description": "ID of the model to use"
+        },
+        "messages": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/message"
+          },
+          "minItems": 1,
+          "description": "List of messages comprising the conversation so far"
+        },
+        "temperature": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 2,
+          "default": 0.7,
+          "description": "Sampling temperature. Higher values mean more random completions"
+        },
+        "max_tokens": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 32000,
+          "default": 2000,
+          "description": "Maximum number of tokens to generate"
+        },
+        "top_p": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 1,
+          "description": "Nucleus sampling parameter"
+        },
+        "stream": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether to stream partial message deltas"
+        },
+        "stop": {
+          "oneOf": [
+            {"type": "string"},
+            {
+              "type": "array",
+              "items": {"type": "string"},
+              "maxItems": 4
+            }
+          ],
+          "description": "Up to 4 sequences where the API will stop generating tokens"
+        },
+        "presence_penalty": {
+          "type": "number",
+          "minimum": -2,
+          "maximum": 2,
+          "default": 0,
+          "description": "Penalize new tokens based on whether they appear in the text so far"
+        },
+        "frequency_penalty": {
+          "type": "number",
+          "minimum": -2,
+          "maximum": 2,
+          "default": 0,
+          "description": "Penalize new tokens based on their frequency in the text so far"
+        }
+      }
+    },
+    "chatChoice": {
+      "type": "object",
+      "required": ["index", "message", "finish_reason"],
+      "properties": {
+        "index": {
+          "type": "integer",
+          "description": "The index of this choice"
+        },
+        "message": {
+          "$ref": "#/definitions/message"
+        },
+        "finish_reason": {
+          "type": "string",
+          "enum": ["stop", "length", "content_filter"],
+          "description": "The reason the model stopped generating tokens"
+        },
+        "logprobs": {
+          "type": ["object", "null"],
+          "description": "Log probabilities of the generated tokens"
+        }
+      }
+    },
+    "usage": {
+      "type": "object",
+      "properties": {
+        "prompt_tokens": {
+          "type": "integer",
+          "description": "Number of tokens in the prompt"
+        },
+        "completion_tokens": {
+          "type": "integer",
+          "description": "Number of tokens in the completion"
+        },
+        "total_tokens": {
+          "type": "integer",
+          "description": "Total tokens (prompt + completion)"
+        }
+      }
+    },
+    "chatResponse": {
+      "type": "object",
+      "required": ["id", "object", "created", "model", "choices"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^chatcmpl-",
+          "description": "Unique identifier for the completion"
+        },
+        "object": {
+          "type": "string",
+          "enum": ["chat.completion", "chat.completion.chunk"],
+          "description": "Object type, always 'chat.completion'"
+        },
+        "created": {
+          "type": "integer",
+          "description": "Unix timestamp when the completion was created"
+        },
+        "model": {
+          "type": "string",
+          "description": "The model used for completion"
+        },
+        "system_fingerprint": {
+          "type": "string",
+          "description": "System fingerprint for the model configuration"
+        },
+        "choices": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/chatChoice"
+          },
+          "minItems": 1,
+          "description": "List of completion choices"
+        },
+        "usage": {
+          "$ref": "#/definitions/usage"
+        }
+      }
+    },
+    "model": {
+      "type": "object",
+      "required": ["id", "object", "created", "owned_by"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Model identifier"
+        },
+        "object": {
+          "type": "string",
+          "enum": ["model"],
+          "description": "Object type, always 'model'"
+        },
+        "created": {
+          "type": "integer",
+          "description": "Unix timestamp when the model was created"
+        },
+        "owned_by": {
+          "type": "string",
+          "description": "Organization owning the model"
+        }
+      }
+    },
+    "modelListResponse": {
+      "type": "object",
+      "required": ["object", "data"],
+      "properties": {
+        "object": {
+          "type": "string",
+          "enum": ["list"],
+          "description": "Object type, always 'list'"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/model"
+          },
+          "description": "List of available models"
+        }
+      }
+    },
+    "error": {
+      "type": "object",
+      "required": ["error"],
+      "properties": {
+        "error": {
+          "type": "object",
+          "required": ["message", "type", "code"],
+          "properties": {
+            "message": {
+              "type": "string",
+              "description": "Human-readable error message"
+            },
+            "type": {
+              "type": "string",
+              "description": "Error type"
+            },
+            "code": {
+              "type": ["string", "integer"],
+              "description": "Error code"
+            }
+          }
+        }
+      }
+    }
+  },
+  "request": {
+    "$ref": "#/definitions/chatRequest"
+  },
+  "response": {
+    "$ref": "#/definitions/chatResponse"
+  }
+}
+
