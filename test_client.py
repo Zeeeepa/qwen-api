@@ -7,7 +7,7 @@ from openai import OpenAI
 
 client = OpenAI(
     api_key="sk-any",  # ✅ Any key works!
-    base_url="http://localhost:7000/v1"
+    base_url="http://localhost:7050/v1"  # Updated default port
 )
 
 result = client.chat.completions.create(
@@ -16,4 +16,3 @@ result = client.chat.completions.create(
 )
 
 print(result.choices[0].message.content)
-
