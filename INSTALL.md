@@ -50,7 +50,7 @@ Best for development and testing:
 pip install -e .
 
 # Run the server
-python main.py
+python start.py
 
 # Or use the installed command
 z-ai2api
@@ -78,7 +78,7 @@ For custom installations:
 pip install -r requirements.txt
 
 # Run directly
-python main.py
+python start.py
 ```
 
 ---
@@ -143,19 +143,19 @@ AUTH_TOKENS_FILE=tokens.txt
 
 ```bash
 # Start with default settings (port 8080)
-python main.py
+python start.py
 
 # Specify custom port
-python main.py --port 8081
+python start.py --port 8081
 
 # Enable debug mode
-python main.py --debug
+python start.py --debug
 
 # Specify host
-python main.py --host 0.0.0.0 --port 8081
+python start.py --host 0.0.0.0 --port 8081
 
 # Show all options
-python main.py --help
+python start.py --help
 ```
 
 ### Using the Installed Command
@@ -298,7 +298,7 @@ FLAREPROX_AUTO_ROTATE=true
 
 ```bash
 # Start server
-python main.py --flareprox
+python start.py --flareprox
 
 # Check status
 curl http://localhost:8080/stats
@@ -323,7 +323,7 @@ curl http://localhost:8080/stats
 # Error: Port 8080 already in use
 
 # Solution: Use different port
-python main.py --port 8081
+python start.py --port 8081
 ```
 
 #### 2. Module Not Found
@@ -363,11 +363,11 @@ Enable detailed logging:
 
 ```bash
 # CLI
-python main.py --debug
+python start.py --debug
 
 # Environment variable
 export DEBUG_LOGGING=true
-python main.py
+python start.py
 
 # Check debug info
 curl http://localhost:8080/debug

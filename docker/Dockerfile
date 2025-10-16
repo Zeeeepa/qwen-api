@@ -44,5 +44,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/v1/models')" || exit 1
 
 # Run the application
-CMD ["python", "main.py"]
-
+CMD ["python", "start.py"]

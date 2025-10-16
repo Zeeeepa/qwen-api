@@ -258,7 +258,7 @@ qwen-api/
 │   ├── start.sh            # Start server only
 │   └── send_request.sh     # Test API only
 ├── test_auth.py            # Authentication test script
-├── main.py                 # Server entry point
+├── start.py                 # Server entry point
 ├── .env                    # Configuration file
 └── requirements.txt        # Python dependencies
 ```

@@ -46,5 +46,4 @@ clean:
 
 run:
 	@echo "🚀 Starting server..."
-	python main.py
-
+	python start.py

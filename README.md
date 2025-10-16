@@ -61,7 +61,7 @@ cp .env.example .env
 nano .env  # or use your preferred editor
 
 # Start server!
-python main.py
+python start.py
 ```
 
 **✅ FlareProx auto-initializes on startup if credentials are configured!**
@@ -150,7 +150,7 @@ FLAREPROX_AUTO_ROTATE=true
 
 3. **Start Server** (FlareProx auto-initializes!):
 ```bash
-python main.py
+python start.py
 ```
 
 That's it! FlareProx will:
@@ -309,7 +309,7 @@ qwen-api/
 │   └── deploy.sh          # Deployment script
 ├── .env.example          # Environment template
 ├── flareprox.py          # FlareProx manager
-├── main.py               # Entry point
+├── start.py               # Entry point
 └── README.md             # This file
 ```
 
@@ -324,17 +324,17 @@ qwen-api/
 pip install -e .
 
 # Run with auto-reload
-python main.py 
+python start.py 
 ```
 
 ### CLI Commands
 
 ```bash
 # List available models
-python main.py --list-models
+python start.py --list-models
 
 # Health check
-python main.py --check
+python start.py --check
 
 ```
 

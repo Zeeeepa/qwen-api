@@ -101,7 +101,7 @@ kill $(cat qwen-api-deployment/server.pid)
 cd qwen-api-deployment && \
 source venv/bin/activate && \
 kill $(cat server.pid) 2>/dev/null || true && \
-nohup python main.py > server.log 2>&1 & echo $! > server.pid
+nohup python start.py > server.log 2>&1 & echo $! > server.pid
 ```
 
 ## 🔐 Authentication
@@ -174,7 +174,7 @@ rm qwen-api-deployment/.sessions/qwen_session.json
 # Restart server
 cd qwen-api-deployment && \
 kill $(cat server.pid) 2>/dev/null || true && \
-nohup python main.py > server.log 2>&1 & echo $! > server.pid
+nohup python start.py > server.log 2>&1 & echo $! > server.pid
 ```
 
 ### Empty API Responses
@@ -210,7 +210,7 @@ echo "QWEN_BEARER_TOKEN=your_token_here" >> .env
 
 # Restart server
 kill $(cat server.pid) && \
-nohup python main.py > server.log 2>&1 & echo $! > server.pid
+nohup python start.py > server.log 2>&1 & echo $! > server.pid
 ```
 
 ## 🤝 Contributing

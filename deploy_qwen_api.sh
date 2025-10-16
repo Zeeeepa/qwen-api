@@ -405,7 +405,7 @@ start_server() {
 
     # Start server in background
     print_info "Working directory: $(pwd)"
-    nohup python3 main.py --port $SERVER_PORT > "$LOG_DIR/server.log" 2>&1 &
+    nohup python3 start.py --port $SERVER_PORT > "$LOG_DIR/server.log" 2>&1 &
     SERVER_PID=$!
     
     # Save PID

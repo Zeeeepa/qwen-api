@@ -71,7 +71,7 @@ fi
 
 # Start the server in background
 echo -e "${BLUE}🚀 Starting Qwen API server...${NC}"
-nohup python main.py > logs/server.log 2>&1 &
+nohup python start.py > logs/server.log 2>&1 &
 SERVER_PID=$!
 echo $SERVER_PID > server.pid
 

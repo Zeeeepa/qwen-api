@@ -35,11 +35,11 @@ def parse_args() -> argparse.Namespace:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python main.py                    # Start server with default settings
-  python main.py --port 8081        # Start server on port 8081
-  python main.py --host 0.0.0.0     # Bind to all interfaces
-  python main.py --debug            # Enable debug logging
-  python main.py --no-reload        # Disable hot reload
+  python start.py                    # Start server with default settings
+  python start.py --port 8081        # Start server on port 8081
+  python start.py --host 0.0.0.0     # Bind to all interfaces
+  python start.py --debug            # Enable debug logging
+  python start.py --no-reload        # Disable hot reload
 
 Environment Variables:
   LISTEN_PORT         Server port (default: 8080)
