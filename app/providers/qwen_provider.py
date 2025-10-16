@@ -809,10 +809,10 @@ class QwenProvider(BaseProvider):
     """
 
     # Correct API endpoints (from reference implementation)
-    BASE_URL = "https://chat.qwen.ai"
-    CHAT_COMPLETIONS_URL = f"{BASE_URL}/api/v2/chat/completions"
-    NEW_CHAT_URL = f"{BASE_URL}/api/v2/chats/new"
-    MODELS_URL = f"{BASE_URL}/api/models"
+    BASE_URL = "https://qwen.aikit.club"
+    CHAT_COMPLETIONS_URL = f"{BASE_URL}/v1/chat/completions"
+    NEW_CHAT_URL = f"{BASE_URL}/v1/chats/new"  # Not used with public instance
+    MODELS_URL = f"{BASE_URL}/v1/models"
 
     def __init__(self, auth_config: Optional[Dict[str, str]] = None):
         """
@@ -866,6 +866,41 @@ class QwenProvider(BaseProvider):
     def get_supported_models(self) -> List[str]:
         """Get supported models list"""
         return list(self.model_mapping.keys())
+
+    def _normalize_model_name(self, model: str) -> str:
+        """
+        Normalize OpenAI-style model names to valid Qwen model names
+        
+        Args:
+            model: Model name from OpenAI request (e.g., "gpt-4", "gpt-3.5-turbo")
+            
+        Returns:
+            Valid Qwen model name (e.g., "qwen-max-latest", "qwen-turbo-latest")
+        """
+        # Direct Qwen model names pass through
+        if model.startswith("qwen-"):
+            return model
+            
+        # Map common OpenAI models to Qwen equivalents
+        model_mapping = {
+            "gpt-4": "qwen-max-latest",
+            "gpt-4-turbo": "qwen-max-latest", 
+            "gpt-4o": "qwen-max-latest",
+            "gpt-3.5-turbo": "qwen-turbo-latest",
+            "gpt-3.5": "qwen-turbo-latest"
+        }
+        
+        # Check exact match first
+        if model in model_mapping:
+            return model_mapping[model]
+            
+        # Check prefix match (e.g., "gpt-4-0613" -> "qwen-max-latest")
+        for prefix, qwen_model in model_mapping.items():
+            if model.startswith(prefix):
+                return qwen_model
+                
+        # Default: use qwen-max-latest for unknown models
+        return "qwen-max-latest"
 
     async def get_auth_headers(self) -> Dict[str, str]:
         """
@@ -1113,7 +1148,12 @@ class QwenProvider(BaseProvider):
         else:
             # Standard text-to-text chat - CREATE CHAT SESSION FIRST!
             logger.info(f"Creating chat session for {chat_type}")
-            chat_id = await self.create_chat_session(request.model, "normal")
+            # Normalize model name to valid Qwen model
+            # Any unknown model defaults to qwen-max-latest
+            qwen_model = self._normalize_model_name(request.model)
+            logger.info(f"📝 Normalized model: {request.model} -> {qwen_model}")
+            
+            chat_id = await self.create_chat_session(qwen_model, "normal")
 
             if not chat_id:
                 raise ValueError(f"Failed to create chat session for {chat_type}")
@@ -1121,7 +1161,7 @@ class QwenProvider(BaseProvider):
             # Build text chat request with real chat_id  
             # Use the stream parameter from the original request
             body = self.builder.build_text_chat_request(
-                model=request.model,
+                model=qwen_model,
                 messages=messages_list,
                 stream=request.stream
             )

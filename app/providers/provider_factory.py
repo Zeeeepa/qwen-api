@@ -14,6 +14,7 @@ from app.core.config import settings
 from app.models.schemas import OpenAIRequest
 from app.providers.base import BaseProvider, ProviderConfig, provider_registry
 from app.providers.qwen_provider import QwenProvider
+from app.providers.qwen_simple_proxy import QwenSimpleProxy
 from app.providers.qwen_proxy_provider import QwenProxyProvider
 from app.utils.logger import get_logger
 
@@ -131,15 +132,28 @@ class ProviderFactory:
                 # will call initialize() automatically when needed.
                 
             else:
+                # Load token from config or file
+                qwen_config = provider_configs.get("qwen", {})
+                qwen_token = qwen_config.get("bearer_token")
+                
+                if not qwen_token:
+                    # Try loading from .qwen_bearer_token file
+                    token_file = Path(".qwen_bearer_token")
+                    if token_file.exists():
+                        qwen_token = token_file.read_text().strip()
+                        logger.info("✅ Loaded token from .qwen_bearer_token")
+                    else:
+                        raise ValueError("No Qwen token found! Run setup.sh to get a token.")
+                
                 # Use direct provider (chat.qwen.ai) - LEGACY
                 logger.info("⚠️  Using Direct Qwen Provider (legacy mode)")
                 qwen_config = provider_configs.get("qwen")
                 if qwen_config:
                     logger.info("🔐 Initializing Qwen provider with authentication")
-                    qwen_provider = QwenProvider(auth_config=qwen_config)
+                    qwen_provider = QwenSimpleProxy(qwen_token)
                 else:
                     logger.info("⚠️ Initializing Qwen provider without authentication (manual token required)")
-                    qwen_provider = QwenProvider()
+                    qwen_provider = QwenSimpleProxy(qwen_token)
 
             provider_registry.register(
                 qwen_provider,
