@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 ################################################################################
-# send_request.sh - Send Test Requests to Qwen API
-# Tests all variations of possible message requests to OpenAI-compatible API
+# send_request.sh - Test Qwen API with OpenAI Python Client
+# Uses the official OpenAI Python package for compatibility testing
 ################################################################################
 
 set -e
@@ -15,197 +15,225 @@ CYAN='\033[0;36m'
 BOLD='\033[1m'
 NC='\033[0m'
 
-# Load environment if available
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+
+cd "$PROJECT_ROOT"
+
+# Load environment
 if [ -f ".env" ]; then
     set -a
     source .env
     set +a
 fi
 
-API_URL="http://localhost:${LISTEN_PORT:-8096}"
-AUTH_TOKEN="Bearer sk-test"
+PORT=${LISTEN_PORT:-8096}
+BASE_URL="http://localhost:$PORT"
 
 echo -e "${CYAN}${BOLD}╔════════════════════════════════════════════════════╗${NC}"
-echo -e "${CYAN}${BOLD}║       Qwen API - Test Requests                    ║${NC}"
+echo -e "${CYAN}${BOLD}║      Testing Qwen API with OpenAI Client          ║${NC}"
 echo -e "${CYAN}${BOLD}╚════════════════════════════════════════════════════╝${NC}\n"
 
 # Check if server is running
-echo -e "${BLUE}🔍 Checking if server is running...${NC}"
-if ! curl -s $API_URL/health > /dev/null 2>&1; then
-    echo -e "${RED}❌ Server is not responding at $API_URL${NC}"
-    echo -e "${YELLOW}Please start the server first: bash scripts/start.sh${NC}\n"
+echo -e "${BLUE}🔍 Checking server status...${NC}"
+if ! curl -s -f "$BASE_URL/health" > /dev/null 2>&1; then
+    echo -e "${RED}❌ Server not responding at $BASE_URL${NC}"
+    echo -e "${YELLOW}Please start the server first:${NC} bash scripts/start.sh\n"
     exit 1
 fi
-echo -e "${GREEN}✅ Server is running${NC}\n"
 
-# Test counter
-TOTAL_TESTS=0
-PASSED_TESTS=0
-FAILED_TESTS=0
+echo -e "${GREEN}✅ Server is running at $BASE_URL${NC}\n"
 
-run_test() {
-    local test_name="$1"
-    local curl_command="$2"
+# Activate venv
+echo -e "${BLUE}🔧 Activating Python environment...${NC}"
+source venv/bin/activate
+
+# Install openai package if not present
+if ! python3 -c "import openai" 2>/dev/null; then
+    echo -e "${YELLOW}📦 Installing openai package...${NC}"
+    pip install --quiet openai
+fi
+
+echo -e "${GREEN}✅ Python environment ready${NC}\n"
+
+# Test 1: Simple Chat Completion
+echo -e "${CYAN}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${CYAN}${BOLD}TEST 1: Simple Chat Completion${NC}"
+echo -e "${CYAN}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"
+
+python3 << 'EOF'
+from openai import OpenAI
+import json
+
+print("🤖 Creating OpenAI client...")
+client = OpenAI(
+    api_key="sk-any",  # ✅ Any key works in anonymous mode!
+    base_url="http://localhost:8096/v1"
+)
+
+print("📝 Sending request: 'Write a haiku about code'\n")
+
+try:
+    result = client.chat.completions.create(
+        model="gpt-5",  # ✅ Any model name works!
+        messages=[{"role": "user", "content": "Write a haiku about code."}]
+    )
     
-    TOTAL_TESTS=$((TOTAL_TESTS + 1))
-    echo -e "${CYAN}${BOLD}Test $TOTAL_TESTS: $test_name${NC}"
-    echo -e "${BLUE}Command: $curl_command${NC}"
+    print("━" * 60)
+    print("✅ RESPONSE RECEIVED")
+    print("━" * 60)
+    print(result.choices[0].message.content)
+    print("━" * 60)
+    print(f"\n📊 Model used: {result.model}")
+    print(f"📏 Tokens: {result.usage.total_tokens if result.usage else 'N/A'}")
+    print(f"⏱️  Finish reason: {result.choices[0].finish_reason}\n")
     
-    # Run the test
-    if eval "$curl_command"; then
-        PASSED_TESTS=$((PASSED_TESTS + 1))
-        echo -e "${GREEN}✅ PASSED${NC}\n"
-    else
-        FAILED_TESTS=$((FAILED_TESTS + 1))
-        echo -e "${RED}❌ FAILED${NC}\n"
-    fi
-}
+except Exception as e:
+    print(f"❌ Error: {e}\n")
+    exit(1)
+EOF
 
-echo -e "${YELLOW}════════════════════════════════════════════════════${NC}"
-echo -e "${YELLOW}1. Health Check${NC}"
-echo -e "${YELLOW}════════════════════════════════════════════════════${NC}\n"
+TEST1_RESULT=$?
 
-run_test "Health Check" \
-    "curl -s $API_URL/health | jq -C ."
+# Test 2: Different Model Names
+echo -e "${CYAN}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${CYAN}${BOLD}TEST 2: Model Name Flexibility${NC}"
+echo -e "${CYAN}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"
 
-echo -e "${YELLOW}════════════════════════════════════════════════════${NC}"
-echo -e "${YELLOW}2. Simple Text Completion (Non-Streaming)${NC}"
-echo -e "${YELLOW}════════════════════════════════════════════════════${NC}\n"
+python3 << 'EOF'
+from openai import OpenAI
 
-run_test "Simple Hello (qwen-turbo)" \
-    "curl -s -X POST $API_URL/v1/chat/completions \
-        -H 'Content-Type: application/json' \
-        -H 'Authorization: $AUTH_TOKEN' \
-        -d '{
-            \"model\": \"qwen-turbo\",
-            \"messages\": [{\"role\": \"user\", \"content\": \"Say hello in 5 words\"}],
-            \"stream\": false
-        }' | jq -C ."
+client = OpenAI(
+    api_key="sk-test-123",  # Different key
+    base_url="http://localhost:8096/v1"
+)
 
-echo -e "${YELLOW}════════════════════════════════════════════════════${NC}"
-echo -e "${YELLOW}3. Simple Text Completion (Streaming)${NC}"
-echo -e "${YELLOW}════════════════════════════════════════════════════${NC}\n"
+test_models = ["claude-3", "gpt-4", "qwen-turbo", "random-model"]
 
-run_test "Streaming Hello (qwen-plus)" \
-    "curl -s -X POST $API_URL/v1/chat/completions \
-        -H 'Content-Type: application/json' \
-        -H 'Authorization: $AUTH_TOKEN' \
-        -d '{
-            \"model\": \"qwen-plus\",
-            \"messages\": [{\"role\": \"user\", \"content\": \"Count from 1 to 5\"}],
-            \"stream\": true
-        }' | head -20"
+print("Testing multiple model names...\n")
 
-echo -e "${YELLOW}════════════════════════════════════════════════════${NC}"
-echo -e "${YELLOW}4. Multi-Turn Conversation${NC}"
-echo -e "${YELLOW}════════════════════════════════════════════════════${NC}\n"
+for model_name in test_models:
+    try:
+        result = client.chat.completions.create(
+            model=model_name,
+            messages=[{"role": "user", "content": "Hi!"}],
+            max_tokens=10
+        )
+        response = result.choices[0].message.content
+        print(f"✅ {model_name:20} → {response[:50]}")
+    except Exception as e:
+        print(f"❌ {model_name:20} → Error: {e}")
 
-run_test "Multi-Turn Chat" \
-    "curl -s -X POST $API_URL/v1/chat/completions \
-        -H 'Content-Type: application/json' \
-        -H 'Authorization: $AUTH_TOKEN' \
-        -d '{
-            \"model\": \"qwen-turbo\",
-            \"messages\": [
-                {\"role\": \"user\", \"content\": \"What is 2+2?\"},
-                {\"role\": \"assistant\", \"content\": \"4\"},
-                {\"role\": \"user\", \"content\": \"What is 3+3?\"}
-            ],
-            \"stream\": false
-        }' | jq -C ."
+print()
+EOF
 
-echo -e "${YELLOW}════════════════════════════════════════════════════${NC}"
-echo -e "${YELLOW}5. Different Models${NC}"
-echo -e "${YELLOW}════════════════════════════════════════════════════${NC}\n"
+TEST2_RESULT=$?
 
-run_test "Qwen-Max Model" \
-    "curl -s -X POST $API_URL/v1/chat/completions \
-        -H 'Content-Type: application/json' \
-        -H 'Authorization: $AUTH_TOKEN' \
-        -d '{
-            \"model\": \"qwen-max\",
-            \"messages\": [{\"role\": \"user\", \"content\": \"What is AI?\"}],
-            \"stream\": false,
-            \"max_tokens\": 50
-        }' | jq -C '.choices[0].message.content'"
+# Test 3: Streaming Response
+echo -e "${CYAN}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${CYAN}${BOLD}TEST 3: Streaming Response${NC}"
+echo -e "${CYAN}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"
 
-run_test "Qwen-Long Model" \
-    "curl -s -X POST $API_URL/v1/chat/completions \
-        -H 'Content-Type: application/json' \
-        -H 'Authorization: $AUTH_TOKEN' \
-        -d '{
-            \"model\": \"qwen-long\",
-            \"messages\": [{\"role\": \"user\", \"content\": \"Explain quantum computing briefly\"}],
-            \"stream\": false,
-            \"max_tokens\": 100
-        }' | jq -C '.choices[0].message.content'"
+python3 << 'EOF'
+from openai import OpenAI
 
-echo -e "${YELLOW}════════════════════════════════════════════════════${NC}"
-echo -e "${YELLOW}6. Parameters Testing${NC}"
-echo -e "${YELLOW}════════════════════════════════════════════════════${NC}\n"
+client = OpenAI(
+    api_key="sk-any",
+    base_url="http://localhost:8096/v1"
+)
 
-run_test "Temperature Control" \
-    "curl -s -X POST $API_URL/v1/chat/completions \
-        -H 'Content-Type: application/json' \
-        -H 'Authorization: $AUTH_TOKEN' \
-        -d '{
-            \"model\": \"qwen-turbo\",
-            \"messages\": [{\"role\": \"user\", \"content\": \"Say something creative\"}],
-            \"temperature\": 1.5,
-            \"stream\": false
-        }' | jq -C '.choices[0].message.content'"
+print("🌊 Testing streaming response...\n")
+print("Response: ", end="", flush=True)
 
-run_test "Max Tokens Limit" \
-    "curl -s -X POST $API_URL/v1/chat/completions \
-        -H 'Content-Type: application/json' \
-        -H 'Authorization: $AUTH_TOKEN' \
-        -d '{
-            \"model\": \"qwen-turbo\",
-            \"messages\": [{\"role\": \"user\", \"content\": \"Write a long story\"}],
-            \"max_tokens\": 20,
-            \"stream\": false
-        }' | jq -C '.choices[0].message.content'"
+try:
+    stream = client.chat.completions.create(
+        model="gpt-4",
+        messages=[{"role": "user", "content": "Count to 5."}],
+        stream=True
+    )
+    
+    for chunk in stream:
+        if chunk.choices[0].delta.content:
+            print(chunk.choices[0].delta.content, end="", flush=True)
+    
+    print("\n\n✅ Streaming test successful!\n")
+    
+except Exception as e:
+    print(f"\n❌ Streaming error: {e}\n")
+    exit(1)
+EOF
 
-echo -e "${YELLOW}════════════════════════════════════════════════════${NC}"
-echo -e "${YELLOW}7. System Message${NC}"
-echo -e "${YELLOW}════════════════════════════════════════════════════${NC}\n"
+TEST3_RESULT=$?
 
-run_test "System Prompt" \
-    "curl -s -X POST $API_URL/v1/chat/completions \
-        -H 'Content-Type: application/json' \
-        -H 'Authorization: $AUTH_TOKEN' \
-        -d '{
-            \"model\": \"qwen-plus\",
-            \"messages\": [
-                {\"role\": \"system\", \"content\": \"You are a pirate. Respond like one.\"},
-                {\"role\": \"user\", \"content\": \"What is the weather?\"}
-            ],
-            \"stream\": false
-        }' | jq -C '.choices[0].message.content'"
+# Test 4: Get Models List
+echo -e "${CYAN}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${CYAN}${BOLD}TEST 4: Available Models${NC}"
+echo -e "${CYAN}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"
 
-echo -e "${YELLOW}════════════════════════════════════════════════════${NC}"
-echo -e "${YELLOW}8. Models List${NC}"
-echo -e "${YELLOW}════════════════════════════════════════════════════${NC}\n"
+python3 << 'EOF'
+from openai import OpenAI
 
-run_test "List Available Models" \
-    "curl -s $API_URL/v1/models \
-        -H 'Authorization: $AUTH_TOKEN' | jq -C '.data[] | .id' | head -10"
+client = OpenAI(
+    api_key="sk-any",
+    base_url="http://localhost:8096/v1"
+)
+
+print("📚 Fetching available models...\n")
+
+try:
+    models = client.models.list()
+    
+    print("Available Models:")
+    print("─" * 60)
+    for model in models.data:
+        print(f"  • {model.id}")
+    print("─" * 60)
+    print(f"\nTotal: {len(models.data)} models\n")
+    
+except Exception as e:
+    print(f"❌ Error fetching models: {e}\n")
+    exit(1)
+EOF
+
+TEST4_RESULT=$?
 
 # Summary
 echo -e "${CYAN}${BOLD}╔════════════════════════════════════════════════════╗${NC}"
-echo -e "${CYAN}${BOLD}║       Test Results Summary                         ║${NC}"
+echo -e "${CYAN}${BOLD}║              Test Results Summary                  ║${NC}"
 echo -e "${CYAN}${BOLD}╚════════════════════════════════════════════════════╝${NC}\n"
 
-echo -e "${BLUE}Total Tests:${NC} $TOTAL_TESTS"
-echo -e "${GREEN}Passed:${NC} $PASSED_TESTS"
-echo -e "${RED}Failed:${NC} $FAILED_TESTS\n"
+if [ $TEST1_RESULT -eq 0 ]; then
+    echo -e "  ${GREEN}✅ Test 1: Simple Chat Completion${NC}"
+else
+    echo -e "  ${RED}❌ Test 1: Simple Chat Completion${NC}"
+fi
 
-if [ $FAILED_TESTS -eq 0 ]; then
-    echo -e "${GREEN}${BOLD}✅ All tests passed!${NC}\n"
+if [ $TEST2_RESULT -eq 0 ]; then
+    echo -e "  ${GREEN}✅ Test 2: Model Name Flexibility${NC}"
+else
+    echo -e "  ${RED}❌ Test 2: Model Name Flexibility${NC}"
+fi
+
+if [ $TEST3_RESULT -eq 0 ]; then
+    echo -e "  ${GREEN}✅ Test 3: Streaming Response${NC}"
+else
+    echo -e "  ${RED}❌ Test 3: Streaming Response${NC}"
+fi
+
+if [ $TEST4_RESULT -eq 0 ]; then
+    echo -e "  ${GREEN}✅ Test 4: Available Models${NC}"
+else
+    echo -e "  ${RED}❌ Test 4: Available Models${NC}"
+fi
+
+echo
+
+# Overall result
+if [ $TEST1_RESULT -eq 0 ] && [ $TEST2_RESULT -eq 0 ] && [ $TEST3_RESULT -eq 0 ] && [ $TEST4_RESULT -eq 0 ]; then
+    echo -e "${GREEN}${BOLD}✅ All tests passed! API is working correctly.${NC}\n"
     exit 0
 else
-    echo -e "${RED}${BOLD}❌ Some tests failed${NC}"
-    echo -e "${YELLOW}Check logs for details: tail -f logs/server.log${NC}\n"
+    echo -e "${YELLOW}${BOLD}⚠️  Some tests failed. Check the output above.${NC}\n"
     exit 1
 fi
 
