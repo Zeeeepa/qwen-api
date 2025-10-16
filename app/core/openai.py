@@ -185,9 +185,13 @@ async def chat_completions(request: OpenAIRequest, authorization: str = Header(.
 
         token = authorization[7:].strip()
         
-        # Validate Qwen JWT token
-        if not validate_qwen_token(token):
-            raise HTTPException(status_code=401, detail="Invalid or expired Qwen token")
+        # Skip token validation in anonymous mode (allow any API key)
+        if not settings.ANONYMOUS_MODE:
+            # Validate Qwen JWT token
+            if not validate_qwen_token(token):
+                raise HTTPException(status_code=401, detail="Invalid or expired Qwen token")
+        else:
+            logger.debug("🔓 Anonymous mode: Skipping token validation")
 
         # 使用多提供商路由器处理请求
         router_instance = get_provider_router_instance()
