@@ -43,7 +43,17 @@ echo -e "${BLUE}⚙️  Loading environment variables...${NC}"
 set -a
 source .env
 set +a
-echo -e "${GREEN}✅ Environment loaded${NC}\n"
+
+# Load Playwright-extracted token if available
+if [ -f ".qwen_bearer_token" ]; then
+    export QWEN_BEARER_TOKEN=$(cat .qwen_bearer_token)
+    echo -e "${GREEN}✅ Loaded Bearer token from .qwen_bearer_token${NC}"
+fi
+
+# Ensure direct provider mode for Playwright tokens
+export QWEN_USE_PROXY=false
+
+echo -e "${GREEN}✅ Environment loaded (Direct provider mode)${NC}\n"
 
 # Check if server is already running
 if [ -f "server.pid" ]; then
@@ -102,4 +112,3 @@ else
     rm -f server.pid
     exit 1
 fi
-

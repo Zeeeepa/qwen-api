@@ -75,7 +75,7 @@ print("📝 Sending request: 'Write a haiku about code'\n")
 
 try:
     result = client.chat.completions.create(
-        model="gpt-5",  # ✅ Any model name works!
+        model="qwen-max-latest",  # ✅ Using actual Qwen model name
         messages=[{"role": "user", "content": "Write a haiku about code."}]
     )
     
@@ -108,7 +108,7 @@ client = OpenAI(
     base_url="http://localhost:8096/v1"
 )
 
-test_models = ["claude-3", "gpt-4", "qwen-turbo", "random-model"]
+test_models = ["qwen3-coder-plus", "qwen-max-latest", "qwen-deep-research", "gpt-4"]  # Test actual Qwen models + generic
 
 print("Testing multiple model names...\n")
 
@@ -231,9 +231,31 @@ echo
 # Overall result
 if [ $TEST1_RESULT -eq 0 ] && [ $TEST2_RESULT -eq 0 ] && [ $TEST3_RESULT -eq 0 ] && [ $TEST4_RESULT -eq 0 ]; then
     echo -e "${GREEN}${BOLD}✅ All tests passed! API is working correctly.${NC}\n"
+    
+    # Print SERVER_PORT and model info
+    echo -e "${CYAN}${BOLD}╔════════════════════════════════════════════════════╗${NC}"
+    echo -e "${CYAN}${BOLD}║              Server Information                    ║${NC}"
+    echo -e "${CYAN}${BOLD}╚════════════════════════════════════════════════════╝${NC}\n"
+    
+    echo -e "${BLUE}🌐 SERVER_PORT:${NC} $PORT"
+    echo -e "${BLUE}🔗 API URL:${NC} http://localhost:$PORT/v1"
+    echo -e "\n${BLUE}📚 Available Qwen Models:${NC}"
+    echo -e "   • qwen-max-latest"
+    echo -e "   • qwen3-coder-plus"
+    echo -e "   • qwen-deep-research"
+    echo -e "   • qwen-plus-latest"
+    echo -e "   • qwen-turbo-latest"
+    echo -e "   • qwen-vl-max-latest"
+    echo -e "   • qwen-math-plus-latest"
+    echo -e "   • qwen-coder-turbo-latest"
+    echo -e "   • qwen2.5-coder-32b-instruct"
+    echo -e "   • qwen2.5-72b-instruct"
+    echo -e "   • ...and more\n"
+    
+    echo -e "${GREEN}💡 Tip:${NC} Any model name defaults to qwen-max-latest\n"
+    
     exit 0
 else
     echo -e "${YELLOW}${BOLD}⚠️  Some tests failed. Check the output above.${NC}\n"
     exit 1
 fi
-
