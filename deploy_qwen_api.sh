@@ -394,7 +394,17 @@ start_server() {
     
     print_info "Starting Qwen API server on port $SERVER_PORT..."
     
+    # Check if main.py exists
+    if [ ! -f "main.py" ]; then
+        print_error "Server script not found: main.py"
+        print_info "Current directory: $(pwd)"
+        print_info "Files available:"
+        ls -la | head -20
+        return 1
+    fi
+
     # Start server in background
+    print_info "Working directory: $(pwd)"
     nohup python3 main.py --port $SERVER_PORT > "$LOG_DIR/server.log" 2>&1 &
     SERVER_PID=$!
     
@@ -417,6 +427,8 @@ start_server() {
     echo ""
     print_error "Server failed to start within 30 seconds"
     print_info "Check logs: $LOG_DIR/server.log"
+    print_warning "Last 20 lines of log:"
+    tail -20 "$LOG_DIR/server.log" 2>/dev/null || echo "No log file found"
     return 1
 }
 
