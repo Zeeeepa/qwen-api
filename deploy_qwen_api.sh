@@ -189,21 +189,26 @@ install_dependencies() {
     print_step "Installing Dependencies"
     
     print_info "Upgrading pip..."
-    pip install --upgrade pip --quiet
+    python3 -m pip install --upgrade pip --quiet
     
     print_info "Installing Python packages..."
     if [ -f "requirements.txt" ]; then
-        pip install -r requirements.txt --quiet
+        python3 -m pip install -r requirements.txt --quiet
         print_success "Python packages installed"
     else
         print_warning "requirements.txt not found, installing core packages..."
-        pip install fastapi uvicorn httpx playwright pydantic python-dotenv loguru --quiet
+        python3 -m pip install fastapi uvicorn httpx playwright pydantic python-dotenv loguru --quiet
         print_success "Core packages installed"
     fi
     
-    print_info "Installing Playwright browsers..."
-    playwright install chromium --with-deps > /dev/null 2>&1
-    print_success "Playwright browsers installed"
+    print_info "Installing Playwright browsers (this may take a few minutes)..."
+    python3 -m playwright install chromium --with-deps
+    if [ $? -eq 0 ]; then
+        print_success "Playwright browsers installed"
+    else
+        print_error "Failed to install Playwright browsers"
+        return 1
+    fi
 }
 
 extract_bearer_token() {
@@ -222,6 +227,7 @@ extract_bearer_token() {
     fi
     
     print_info "Extracting new Bearer token using Playwright..."
+    print_info "This may take 30-60 seconds..."
     
     # Create token extraction script
     cat > /tmp/extract_qwen_token.py << 'PYEOF'
@@ -232,30 +238,63 @@ import json
 
 async def extract_token(email, password):
     """Extract Bearer token from Qwen using Playwright"""
+    browser = None
     try:
         async with async_playwright() as p:
+            print("🚀 Launching browser...")
             browser = await p.chromium.launch(headless=True)
-            context = await browser.new_context()
+            context = await browser.new_context(
+                viewport={'width': 1920, 'height': 1080},
+                user_agent='Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            )
             page = await context.new_page()
             
             print("🌐 Navigating to Qwen login page...")
-            await page.goto("https://chat.qwen.ai/auth?action=signin", timeout=30000)
-            await page.wait_for_timeout(3000)
-            
-            print("📝 Filling in credentials...")
-            await page.fill('input[type="email"]', email)
-            await page.fill('input[type="password"]', password)
-            
-            print("🔐 Logging in...")
-            await page.click('button[type="submit"]')
+            await page.goto("https://chat.qwen.ai/auth?action=signin", timeout=60000)
+            print("⏳ Waiting for page to load...")
             await page.wait_for_timeout(5000)
             
-            # Wait for redirect to main chat page
-            await page.wait_for_url("**/chat.qwen.ai**", timeout=30000)
-            print("✅ Login successful!")
+            # Check if we're already logged in
+            current_url = page.url
+            if "chat.qwen.ai" in current_url and "auth" not in current_url:
+                print("✅ Already logged in!")
+            else:
+                print("📝 Filling in credentials...")
+                try:
+                    await page.fill('input[type="email"]', email, timeout=10000)
+                    await page.fill('input[type="password"]', password, timeout=10000)
+                    
+                    print("🔐 Logging in...")
+                    await page.click('button[type="submit"]', timeout=10000)
+                    print("⏳ Waiting for redirect...")
+                    await page.wait_for_timeout(8000)
+                    
+                    # Wait for redirect to main chat page with longer timeout
+                    try:
+                        await page.wait_for_url("**/chat.qwen.ai/**", timeout=45000)
+                        print("✅ Login successful!")
+                    except Exception as nav_error:
+                        # Check current URL - we might already be on chat page
+                        current_url = page.url
+                        if "chat.qwen.ai" in current_url and "auth" not in current_url:
+                            print("✅ Already on chat page!")
+                        else:
+                            raise nav_error
+                except Exception as login_error:
+                    print(f"⚠️  Login step error: {login_error}")
+                    # Check if we're on the chat page anyway
+                    current_url = page.url
+                    if "chat.qwen.ai" in current_url and "auth" not in current_url:
+                        print("✅ On chat page despite error, continuing...")
+                    else:
+                        raise
             
             # Extract token from localStorage
+            print("🔍 Extracting token from localStorage...")
+            await page.wait_for_timeout(2000)
             token = await page.evaluate("() => localStorage.getItem('token')")
+            
+            await browser.close()
             
             if token:
                 print(f"🎉 Token extracted successfully!")
@@ -267,9 +306,18 @@ async def extract_token(email, password):
                 
     except Exception as e:
         print(f"❌ Error during token extraction: {e}")
+        if browser:
+            try:
+                await browser.close()
+            except:
+                pass
         return None
 
 if __name__ == "__main__":
+    if len(sys.argv) != 3:
+        print("Usage: python3 extract_qwen_token.py <email> <password>")
+        sys.exit(1)
+        
     email = sys.argv[1]
     password = sys.argv[2]
     
@@ -286,13 +334,22 @@ if __name__ == "__main__":
         sys.exit(1)
 PYEOF
     
-    # Run token extraction
-    python3 /tmp/extract_qwen_token.py "$QWEN_EMAIL" "$QWEN_PASSWORD"
+    # Run token extraction using virtual environment's Python
+    if ! python3 /tmp/extract_qwen_token.py "$QWEN_EMAIL" "$QWEN_PASSWORD"; then
+        print_error "Failed to extract Bearer token"
+        print_warning "This could be due to:"
+        print_warning "  - Incorrect credentials"
+        print_warning "  - Network connectivity issues"
+        print_warning "  - Qwen website changes"
+        print_warning "  - Playwright browser issues"
+        rm -f /tmp/extract_qwen_token.py
+        exit 1
+    fi
     
-    if [ $? -eq 0 ] && [ -f "$TOKEN_FILE" ]; then
+    if [ -f "$TOKEN_FILE" ]; then
         print_success "Bearer token extracted and saved"
     else
-        print_error "Failed to extract Bearer token"
+        print_error "Token file was not created"
         exit 1
     fi
     
@@ -552,4 +609,3 @@ trap 'print_error "Script terminated"; exit 143' TERM
 
 # Run main function
 main "$@"
-
