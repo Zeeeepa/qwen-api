@@ -39,27 +39,29 @@ def get_provider_router_instance():
 
 def validate_qwen_token(token: str) -> bool:
     """
-    Validate Qwen JWT token format and structure.
+    Validate Qwen token format and structure.
     
-    Token format from qwen.aikit.club:
-    - JWT token with structure: {"id": "...", "last_password_change": ..., "exp": ...}
-    - Must not be expired
-    - Must have valid structure
+    Accepts two token types:
+    1. JWT tokens from qwen.aikit.club (proxy):
+       - JWT structure: {"id": "...", "last_password_change": ..., "exp": ...}
+       - Must not be expired
+    2. Bearer tokens from chat.qwen.ai (direct/Playwright):
+       - Regular Bearer token string (not JWT)
+       - Used for direct authentication
     
     Args:
-        token: JWT token string from Bearer header
+        token: Token string from Bearer header
         
     Returns:
         bool: True if token is valid, False otherwise
     """
     try:
-        # Decode JWT without verification (we're just checking format and expiry)
-        # Note: Qwen tokens are self-contained and don't need server-side verification
+        # Try to decode as JWT first (for proxy tokens)
         payload = jwt.decode(token, options={"verify_signature": False})
         
         # Check required fields exist
         if "id" not in payload or "exp" not in payload:
-            logger.warning("🔑 Invalid token format: missing required fields")
+            logger.warning("🔑 Invalid JWT token format: missing required fields")
             return False
             
         # Check if token is expired
@@ -68,12 +70,17 @@ def validate_qwen_token(token: str) -> bool:
             logger.warning("🔑 Token expired")
             return False
             
-        logger.debug(f"🔑 Valid Qwen token for user: {payload.get('id', 'unknown')[:8]}...")
+        logger.debug(f"🔑 Valid JWT Qwen token for user: {payload.get('id', 'unknown')[:8]}...")
         return True
         
     except jwt.DecodeError:
-        logger.warning("🔑 Invalid JWT token format")
-        return False
+        # Not a JWT - check if it's a regular Bearer token (Playwright/direct)
+        if token and len(token) > 10:  # Basic length check for Bearer token
+            logger.debug("🔑 Valid Bearer token detected (Playwright/direct auth)")
+            return True
+        else:
+            logger.warning("🔑 Invalid token: neither JWT nor valid Bearer token")
+            return False
     except Exception as e:
         logger.error(f"🔑 Token validation error: {e}")
         return False
