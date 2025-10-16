@@ -26,7 +26,31 @@ class ProviderFactory:
     def __init__(self):
         self._initialized = False
         self._default_provider = "qwen"
-        self._use_proxy = True  # Use proxy provider by default for better reliability
+        
+        # Auto-detect provider mode based on token source
+        # - If QWEN_USE_PROXY env var is set, use that
+        # - Otherwise, default to direct provider for Playwright authentication
+        import os
+        
+        # Check for explicit proxy mode setting
+        use_proxy_env = os.getenv("QWEN_USE_PROXY", "").lower()
+        if use_proxy_env in ("true", "1", "yes"):
+            self._use_proxy = True
+            logger.info("🔧 Provider mode: PROXY (explicitly enabled via QWEN_USE_PROXY)")
+        elif use_proxy_env in ("false", "0", "no"):
+            self._use_proxy = False
+            logger.info("🔧 Provider mode: DIRECT (explicitly disabled via QWEN_USE_PROXY)")
+        else:
+            # Auto-detect: Check if Playwright token file exists
+            playwright_token_file = Path(".qwen_bearer_token")
+            if playwright_token_file.exists():
+                self._use_proxy = False
+                logger.info("🔧 Provider mode: DIRECT (Playwright token file detected)")
+            else:
+                # Default to direct provider for Playwright authentication
+                self._use_proxy = False
+                logger.info("🔧 Provider mode: DIRECT (default for Playwright auth)")
+
 
     def _load_provider_configs(self) -> Dict[str, Dict[str, str]]:
         """
