@@ -1,0 +1,178 @@
+# Qwen Model Configuration
+# Complete mapping of 40+ Qwen models with capabilities
+
+models:
+  # Qwen 3.x Main Models
+  - id: qwen3-max
+    name: "Qwen 3 Max"
+    backend_id: qwen3-max
+    aliases:
+      - qwen3-max-latest
+      - qwen-max
+    capabilities:
+      vision: true
+      reasoning: false
+      web_search: true
+      tools: false
+    description: "Flagship Qwen 3 model with maximum capabilities"
+
+  - id: qwen3-vl-plus
+    name: "Qwen 3 Vision Language Plus"
+    backend_id: qwen3-vl-plus
+    aliases:
+      - qwen3-vl-235b-a22b
+    capabilities:
+      vision: true
+      reasoning: true
+      web_search: false
+      tools: false
+    description: "Advanced vision-language model"
+
+  - id: qwen3-coder-plus
+    name: "Qwen 3 Coder Plus"
+    backend_id: qwen3-coder-plus
+    aliases:
+      - qwen3-coder
+    capabilities:
+      vision: true
+      reasoning: false
+      web_search: true
+      tools: true
+    description: "Specialized coding model with tool support"
+
+  - id: qwen-plus-2025-09-11
+    name: "Qwen Plus (2025-09-11)"
+    backend_id: qwen-plus-2025-09-11
+    aliases:
+      - qwen3-next-80b-a3b
+    capabilities:
+      vision: true
+      reasoning: true
+      web_search: true
+      tools: false
+    description: "Next-generation 80B architecture"
+
+  - id: qwen3-235b-a22b
+    name: "Qwen 3 235B A22B"
+    backend_id: qwen3-235b-a22b
+    aliases:
+      - qwen3-235b-a22b-2507
+    capabilities:
+      vision: true
+      reasoning: true
+      web_search: true
+      tools: false
+    description: "Flagship MoE model with 235B parameters"
+
+  - id: qwen3-coder-30b-a3b-instruct
+    name: "Qwen 3 Coder 30B Instruct"
+    backend_id: qwen3-coder-30b-a3b-instruct
+    aliases:
+      - qwen3-coder-flash
+    capabilities:
+      vision: true
+      reasoning: false
+      web_search: true
+      tools: true
+    description: "Fast coding model"
+
+  - id: qwen-max-latest
+    name: "Qwen Max (Latest)"
+    backend_id: qwen-max-latest
+    aliases:
+      - qwen2.5-max
+    capabilities:
+      vision: true
+      reasoning: false
+      web_search: true
+      tools: false
+
+  - id: qwen-plus-2025-01-25
+    name: "Qwen Plus"
+    backend_id: qwen-plus-2025-01-25
+    aliases:
+      - qwen2.5-plus
+      - qwen-plus
+    capabilities:
+      vision: true
+      reasoning: false
+      web_search: true
+      tools: false
+
+  - id: qwq-32b
+    name: "QwQ 32B"
+    backend_id: qwq-32b
+    aliases: []
+    capabilities:
+      vision: false
+      reasoning: true
+      web_search: true
+      tools: false
+
+  - id: qwen-turbo-2025-02-11
+    name: "Qwen Turbo"
+    backend_id: qwen-turbo-2025-02-11
+    aliases:
+      - qwen2.5-turbo
+      - qwen-turbo
+    capabilities:
+      vision: true
+      reasoning: false
+      web_search: true
+      tools: false
+
+  - id: qvq-72b-preview-0310
+    name: "QVQ 72B Preview"
+    backend_id: qvq-72b-preview-0310
+    aliases:
+      - qvq-max
+    capabilities:
+      vision: true
+      reasoning: false
+      web_search: false
+      tools: false
+
+  - id: qwen3-omni-flash
+    name: "Qwen 3 Omni Flash"
+    backend_id: qwen3-omni-flash
+    aliases: []
+    capabilities:
+      vision: true
+      reasoning: true
+      web_search: false
+      tools: false
+
+  - id: qwen-deep-research
+    name: "Qwen Deep Research"
+    backend_id: qwen3-max
+    aliases: []
+    capabilities:
+      vision: true
+      reasoning: false
+      web_search: true
+      tools: false
+    special_mode: research
+
+  - id: qwen-web-dev
+    name: "Qwen Web Development"
+    backend_id: qwen3-max
+    aliases: []
+    capabilities:
+      vision: true
+      reasoning: false
+      web_search: true
+      tools: false
+    special_mode: web_dev
+
+  - id: qwen-full-stack
+    name: "Qwen Full Stack"
+    backend_id: qwen3-max
+    aliases: []
+    capabilities:
+      vision: true
+      reasoning: false
+      web_search: true
+      tools: false
+    special_mode: full_stack
+
+default_model: qwen3-max
