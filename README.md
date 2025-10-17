@@ -1,637 +1,712 @@
-# Z.AI2API - OpenAI-Compatible Multi-Provider API Gateway
+# Qwen API - OpenAI-Compatible API Server
 
 <div align="center">
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Docker](https://img.shields.io/badge/docker-ready-blue.svg)](https://www.docker.com/)
+[![Package](https://img.shields.io/badge/pip-installable-green.svg)](https://pypi.org)
 
-**Unified OpenAI-compatible API gateway supporting multiple AI providers with unlimited scalability via FlareProx**
+**Professional OpenAI-compatible API server for Qwen models with native tools support**
 
-[Features](#features) • [Quick Start](#quick-start) • [Docker Deploy](#docker-deployment) • [FlareProx](#flareprox-integration) • [API Docs](#api-documentation)
+[Features](#-features) • [Quick Start](#-quick-start) • [Installation](#-installation) • [CLI Commands](#-cli-commands) • [Usage](#-usage) • [Tools](#-native-tools)
 
 </div>
 
 ---
 
-## 🎯 Features
+## 🔥 What's New
 
-- ✅ **OpenAI-Compatible API** - Drop-in replacement for OpenAI API
-- 🔄 **Multi-Provider Support** - Z.AI, K2Think, Qwen (45+ models total)
-- 🚀 **Unlimited Scalability** - FlareProx integration for IP rotation via Cloudflare Workers
-- 🐳 **Docker Ready** - One-command deployment with docker-compose
-- ⚡ **High Performance** - Async/await, streaming support
-- 🔐 **Secure** - Environment-based configuration
-- 📊 **Comprehensive** - Tool calling, thinking mode, search, multimodal
+**Latest Update**: Now installable as a Python package!
+
+```bash
+pip install -e .
+qwen-api serve  # Clean CLI interface
+```
+
+- ✅ Professional Python package structure
+- ✅ CLI interface with 4 commands
+- ✅ Clean `pip install -e .` workflow
+- ✅ Backward compatible with existing scripts
 
 ---
 
-## 📦 Supported Providers & Models
+## 🎯 Features
 
-| Provider | Models | Features |
-|----------|--------|----------|
-| **Qwen** | 35+ | qwen-max/plus/turbo/long + variants (thinking, search, image, video, deep-research) |
+### Core Features
+- ✅ **OpenAI-Compatible API** - Drop-in replacement for OpenAI client libraries
+- 🔄 **35+ Qwen Models** - qwen-max, qwen-plus, qwen-turbo, specialized variants
+- 🔥 **Native Tools Support** - Web search, vision, deep research, code execution
+- 🐍 **Python Package** - Install with `pip install -e .`
+- 🖥️ **CLI Interface** - Professional command-line tools
+- ⚡ **High Performance** - Async/await, streaming support
+- 🔐 **Secure** - Environment-based configuration
+- 📊 **Comprehensive** - Function calling, thinking mode, multimodal
 
+### Native Tools
+- 🌐 **Web Search** - Real-time web browsing (not simulated!)
+- 👁️ **Vision** - Image analysis via multimodal input
+- 🧠 **Deep Research** - Extended multi-source research mode (up to 8000 tokens)
+- ⚡ **Code Execution** - Python code generation & execution (beta)
+
+### Model Features
+- 🧩 **Model Aliasing** - Flexible model name mapping
+- 🤔 **Thinking Mode** - Chain-of-thought reasoning
+- 🔍 **Search Integration** - Web search capabilities
+- 🖼️ **Multimodal** - Image, video, audio support
+- 🔧 **Function Calling** - Tool use and structured outputs
 
 ---
 
 ## 🚀 Quick Start
+
+### Method A: Package Installation (Recommended)
+
+```bash
+# 1. Clone repository
+git clone https://github.com/Zeeeepa/qwen-api
+cd qwen-api
+
+# 2. Set credentials
+export QWEN_EMAIL="your-email@example.com"
+export QWEN_PASSWORD="your-password"
+
+# 3. Install package
+pip install -e .
+# OR use uv for faster installs:
+# uv pip install -e .
+
+# 4. Extract token (one-time)
+qwen-api get-token
+
+# 5. Start server
+qwen-api serve
+```
+
+### Method B: Traditional Scripts
+
+```bash
+# 1. Clone repository
+git clone https://github.com/Zeeeepa/qwen-api
+cd qwen-api
+
+# 2. Set credentials
+export QWEN_EMAIL="developer@pixelium.uk"
+export QWEN_PASSWORD="developer1?"
+
+# 3. Run setup and start
+bash scripts/setup.sh
+bash scripts/start.sh
+```
+
+**Server will start on: `http://localhost:7050`**
+
+---
+
+## 📦 Installation
 
 ### Prerequisites
 
-- Python 3.10+
-- Provider credentials (Qwen)
-- (Optional) Cloudflare account for FlareProx unlimited scalability
+- **Python 3.10+**
+- **Qwen Account** - Sign up at [qwen.aikit.club](https://qwen.aikit.club)
+- **System Dependencies** (for Playwright):
+  - Ubuntu/Debian: `apt-get install -y libnss3 libatk-bridge2.0-0 libdrm2 libxkbcommon0 libgbm1 libasound2`
+  - Other platforms: See [Playwright docs](https://playwright.dev/python/docs/intro)
 
-### Installation
+### Installation Steps
+
+#### Using Package Manager (Recommended)
 
 ```bash
-# Clone repository
-git clone https://github.com/Zeeeepa/qwen-api.git
+# Clone the repository
+git clone https://github.com/Zeeeepa/qwen-api
 cd qwen-api
 
-# Install package in development mode
-export QWEN_EMAIL=developer@pixelium.uk
-export QWEN_PASSWORD=<PasswordFromEnvironmentVariables>
-# Or 
-nano .env 
-QWEN_EMAI=developer@pixelium.uk
-QWEN_PASSWORD=<PasswordFromEnvironmentVariables>
-# Then proceed setupping and starting server + sending real open ai api request.
+# Install in editable mode
+pip install -e .
+
+# Or with uv (faster):
+uv pip install -e .
+
+# Playwright browser installation
+playwright install chromium
+```
+
+#### Using Setup Script
+
+```bash
+# Clone the repository
+git clone https://github.com/Zeeeepa/qwen-api
+cd qwen-api
+
+# Run automated setup
 bash scripts/setup.sh
-bash scripts/start.sh
-bash scripts/send_request.sh
-bash scripts/all.sh 
-
-
-## 📖 API Documentation
-
-### Base URL
-```
-http://localhost:8080
 ```
 
-## 🔐 Authentication
+The setup script will:
+1. Create a Python virtual environment
+2. Install all dependencies
+3. Install Playwright browsers
+4. Prompt for Qwen credentials
+5. Extract authentication token
 
-All API requests require a Bearer token containing your Qwen credentials.
+---
 
-### Getting Your Qwen Token
+## 🖥️ CLI Commands
 
+After installation, the `qwen-api` command becomes available:
 
-USE PLAYWRIGHT TO LOG IN TO QWEN account 
-
-Login: "https://chat.qwen.ai/auth?action=signin"
-
-To use in setup.sh step set qwen email and password to log in-> and then properly use this JS code to copy token ->
-```javascript
-javascript:(function(){if(window.location.hostname!=="chat.qwen.ai"){alert("🚀 This code is for chat.qwen.ai");window.open("https://chat.qwen.ai","_blank");return;}
-function getApiKeyData(){const token=localStorage.getItem("token");if(!token){alert("❌ qwen access_token not found !!!");return null;}
-return token;}
-async function copyToClipboard(text){try{await navigator.clipboard.writeText(text);return true;}catch(err){console.error("❌ Failed to copy to clipboard:",err);const textarea=document.createElement("textarea");textarea.value=text;textarea.style.position="fixed";textarea.style.opacity="0";document.body.appendChild(textarea);textarea.focus();textarea.select();const success=document.execCommand("copy");document.body.removeChild(textarea);return success;}}
-const apiKeyData=getApiKeyData();if(!apiKeyData)return;copyToClipboard(apiKeyData).then((success)=>{if(success){alert("🔑 Qwen access_token copied to clipboard !!! 🎉");}else{prompt("🔰 Qwen access_token:",apiKeyData);}});})();
-```
-AFTER TOKEN IS COPIED -> IT SHOULD BE PASTED INTO .env file and saved. 
-
-
-### Using Authentication
-
-Include the Bearer token in all requests:
-```bash
-curl http://localhost:8080/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_QWEN_TOKEN" \
-  -d '{
-    "model": "qwen-turbo",
-    "messages": [{"role": "user", "content": "Hello!"}],
-    "stream": false
-  }'
-```
-
-THIS TO BE IMPLEMENTED WITH PLAYWRIGHT.
-```javascript
-javascript:(function(){if(window.location.hostname!=="chat.qwen.ai"){alert("🚀 This code is for chat.qwen.ai");window.open("https://chat.qwen.ai","_blank");return;}
-function getApiKeyData(){const token=localStorage.getItem("token");if(!token){alert("❌ qwen access_token not found !!!");return null;}
-return token;}
-async function copyToClipboard(text){try{await navigator.clipboard.writeText(text);return true;}catch(err){console.error("❌ Failed to copy to clipboard:",err);const textarea=document.createElement("textarea");textarea.value=text;textarea.style.position="fixed";textarea.style.opacity="0";document.body.appendChild(textarea);textarea.focus();textarea.select();const success=document.execCommand("copy");document.body.removeChild(textarea);return success;}}
-const apiKeyData=getApiKeyData();if(!apiKeyData)return;copyToClipboard(apiKeyData).then((success)=>{if(success){alert("🔑 Qwen access_token copied to clipboard !!! 🎉");}else{prompt("🔰 Qwen access_token:",apiKeyData);}});})();
-```
-
-
-### Supported Features
-
-- ✅ **Streaming** - `"stream": true`
-- ✅ **Thinking Mode** - Use models with `-thinking` suffix
-- ✅ **Search** - Use models with `-search` suffix
-- ✅ **Tool Calling** - `"tools": [...]`
-- ✅ **Multimodal** - Images, video (model-dependent)
-- ✅ **Temperature & Parameters** - `temperature`, `max_tokens`, `top_p`
-
-
-
-
-
-## 🔗 Links
-
-### API documentation : https://qwen-api.readme.io/
-
-- **Spec file**: `qwen.json` (OpenAPI 3.1.0)
-- **What it is**: OpenAPI-ready API documentation covering all endpoints, OpenAI-compatible request/response shapes, security, and examples.
-- **How to use**:
-  - Import `qwen.json` into Swagger UI, Redocly, Postman, Bruno, or Insomnia.
-  - Generate typed clients with your preferred tool (e.g., `openapi-generator`, `orval`).
-- **Servers**: Defaults to `https://qwen.aikit.club`; you can change the `host` variable or edit the server URL after import.
-
-## 🚀 Key Features
-
-| Feature                     | Description                                               |
-| --------------------------- | --------------------------------------------------------- |
-| 🔁 **OpenAI Compatibility** | Drop-in replacement for OpenAI API calls                  |
-| 💬 **Chat Completions**     | Text-based conversations with all Qwen models             |
-| 🎨 **Image Generation**     | Create stunning images from text prompts                  |
-| ✏️ **Image Editing**        | Modify existing images with text instructions             |
-| 🎬 **Video Generation**     | Transform text into video content                         |
-| 🔬 **Deep Research**        | Comprehensive research with web search and citations      |
-| 👨🏻‍💻 **Web Development**      | Generate interactive web components and UI elements       |
-| 🏗️ **Full-Stack Apps**      | Complete application development from frontend to backend |
-| 🔍 **Web Search**           | Enable web search capabilities in conversations           |
-| 🧠 **Thinking Mode**        | Activate reasoning mode for complex problem solving       |
-| 👁️ **Vision Support**       | Analyze images, PDFs, and visual content                  |
-| 📁 **Multimodal Files**     | Support for image, audio, video, and document uploads     |
-| 🌍 **CORS Support**         | Full cross-origin resource sharing support                |
-| ⚡ **Edge Performance**     | Lightning-fast global deployment via Cloudflare Workers   |
-
-## 🛠️ Supported Endpoints
-
-| Endpoint                 | Method      | Description           |
-| ------------------------ | ----------- | --------------------- |
-| `/v1/validate`           | GET/POST    | Validate token        |
-| `/v1/refresh`            | GET/POST    | Refresh token         |
-| `/v1/models`             | GET         | List available models |
-| `/v1/chat/completions`   | POST        | Chat completions      |
-| `/v1/images/generations` | POST        | Generate images       |
-| `/v1/images/edits`       | POST        | Edit existing images  |
-| `/v1/videos/generations` | POST        | Generate videos       |
-| `/v1/chats/delete`       | DELETE/POST | Delete all chats      |
-
-## 🧠 Model Capabilities
-
-| Model Name                 | 👁️ Vision | 💡 Reasoning | 🌐 Web Search | 🔧 Tool Calling |
-| -------------------------- | --------- | ------------ | ------------- | --------------- |
-| QVQ-Max                    | ✅        | ✅           | ❌            | ❌              |
-| Qwen-Deep-Research         | ❌        | ✅           | ❌            | ❌              |
-| Qwen2.5-Max                | ✅        | ✅           | ✅            | ❌              |
-| Qwen3-Next-80B-A3B         | ✅        | ✅           | ✅            | ❌              |
-| Qwen2.5-Plus               | ✅        | ✅           | ✅            | ❌              |
-| Qwen2.5-Turbo              | ✅        | ✅           | ✅            | ❌              |
-| Qwen2.5-14B-Instruct-1M    | ✅        | ✅           | ✅            | ❌              |
-| Qwen2.5-72B-Instruct       | ✅        | ✅           | ❌            | ❌              |
-| Qwen2.5-Coder-32B-Instruct | ✅        | ✅           | ✅            | ❌              |
-| Qwen2.5-Omni-7B            | ✅        | ❌           | ✅            | ❌              |
-| Qwen2.5-VL-32B-Instruct    | ✅        | ✅           | ✅            | ❌              |
-| Qwen3-235B-A22B-2507       | ✅        | ✅           | ✅            | ❌              |
-| Qwen3-30B-A3B-2507         | ✅        | ✅           | ✅            | ❌              |
-| Qwen3-Coder                | ✅        | ❌           | ✅            | ✅              |
-| Qwen3-Coder-Flash          | ✅        | ❌           | ✅            | ❌              |
-| Qwen-Web-Dev               | ✅        | ❌           | ❌            | ❌              |
-| Qwen-Full-Stack            | ✅        | ❌           | ❌            | ❌              |
-| Qwen3-Max                  | ✅        | ❌           | ✅            | ❌              |
-| Qwen3-Omni-Flash           | ✅        | ✅           | ❌            | ❌              |
-| Qwen3-VL-235B-A22B         | ✅        | ✅           | ❌            | ❌              |
-| Qwen3-VL-30B-A3B           | ✅        | ✅           | ❌            | ❌              |
-| QWQ-32B                    | ❌        | ✅           | ✅            | ❌              |
-
-## 🚀 Quick Start
-### Use the Public Instance
-The public instance is available at: `https://qwen.aikit.club`
-
-
-```javascript
-const headers = {
-  Authorization: "Bearer YOUR_QWEN_ACCESS_TOKEN",
-  "Content-Type": "application/json",
-};
-```
-
-4. **Use the Token**: The copied token is now ready to use as your `Bearer` token in API requests
-
-**Important Notes:**
-
-- ⚠️ This script only works on chat.qwen.ai - make sure you're logged in
-- 🔒 Keep your token secure - it provides access to your Qwen account
-- 🔄 You may need to regenerate the token periodically if it expires
-
-
-### Validate Token (from JS snippet)
-
-Validate the access token produced by the browser JS snippet above.
+### `qwen-api serve`
+Start the API server
 
 ```bash
-curl -X POST https://qwen.aikit.club/validate \
-  -H "Content-Type: application/json" \
-  -d '{"token": "YOUR_QWEN_ACCESS_TOKEN"}'
+# Start with defaults
+qwen-api serve
+
+# Custom host and port
+qwen-api serve --host 0.0.0.0 --port 8096
+
+# Enable development mode with auto-reload
+qwen-api serve --reload
+
+# Set log level
+qwen-api serve --log-level debug
+
+# Multiple workers
+qwen-api serve --workers 4
 ```
+
+**Options:**
+- `--host`: Host to bind to (default: 0.0.0.0 from .env)
+- `--port`: Port to bind to (default: 7050 from .env)
+- `--reload`: Enable auto-reload for development
+- `--workers`: Number of worker processes (default: 1)
+- `--log-level`: Log level (debug/info/warning/error)
+
+### `qwen-api health`
+Check if the server is running
 
 ```bash
-curl "https://qwen.aikit.club/validate?token=YOUR_QWEN_ACCESS_TOKEN"
+qwen-api health
+# Output: ✓ Server is healthy
 ```
 
-### Chat Completions
+### `qwen-api get-token`
+Extract Qwen authentication token
 
-```javascript
-const response = await fetch("https://qwen.aikit.club/v1/chat/completions", {
-  method: "POST",
-  headers: headers,
-  body: JSON.stringify({
-    model: "qwen-max-latest",
-    messages: [{ role: "user", content: "Hello, how are you?" }],
-    stream: false,
-  }),
-});
+```bash
+# Using environment variables
+export QWEN_EMAIL="your-email@example.com"
+export QWEN_PASSWORD="your-password"
+qwen-api get-token
+
+# Or pass credentials directly
+qwen-api get-token --email your-email@example.com --password your-password
 ```
 
-### Image Generation
+The token is automatically saved to your `.env` file.
 
-```javascript
-const response = await fetch("https://qwen.aikit.club/v1/images/generations", {
-  method: "POST",
-  headers: headers,
-  body: JSON.stringify({
-    prompt: "A beautiful sunset over mountains",
-    size: "1024x1024",
-  }),
-});
+### `qwen-api info`
+Display server configuration
+
+```bash
+qwen-api info
+# Output:
+# Qwen API Configuration
+#   Server: 0.0.0.0:7050
+#   API Base: https://qwen.aikit.club/v1
+#   Log Level: WARNING
+#   Token Length: 1024 chars
+#   Default Model: qwen3-max
 ```
 
-### Image Editing
+---
 
-```javascript
-// Using FormData for file upload
-const formData = new FormData();
-formData.append("image", imageFile); // File object
-formData.append("prompt", "Change the sky to a starry night");
+## 🔧 Configuration
 
-const response = await fetch("https://qwen.aikit.club/v1/images/edits", {
-  method: "POST",
-  headers: {
-    Authorization: "Bearer YOUR_QWEN_ACCESS_TOKEN",
-  },
-  body: formData,
-});
+### Environment Variables
 
-// Or using JSON with image URL/base64
-const response = await fetch("https://qwen.aikit.club/v1/images/edits", {
-  method: "POST",
-  headers: headers,
-  body: JSON.stringify({
-    image: "https://example.com/image.jpg", // or base64 data URL
-    prompt: "Add a rainbow in the background",
-  }),
-});
+Create a `.env` file in the project root:
+
+```bash
+# Qwen Credentials
+QWEN_EMAIL=your-email@example.com
+QWEN_PASSWORD=your-password
+QWEN_BEARER_TOKEN=  # Auto-extracted by get-token command
+
+# Server Configuration
+HOST=0.0.0.0
+PORT=7050
+LOG_LEVEL=WARNING
+
+# API Configuration
+QWEN_API_BASE=https://qwen.aikit.club/v1
+DEFAULT_MODEL=qwen3-max
 ```
 
-### Web Search Mode
+### Manual Token Extraction
 
-```javascript
-const response = await fetch("https://qwen.aikit.club/v1/chat/completions", {
-  method: "POST",
-  headers: headers,
-  body: JSON.stringify({
-    model: "qwen-max-latest",
-    messages: [{ role: "user", content: "What are the latest AI developments?" }],
-    tools: [{ type: "web_search" }],
-  }),
-});
+If automatic extraction fails:
+
+1. Login to [https://qwen.aikit.club](https://qwen.aikit.club)
+2. Open browser DevTools (F12)
+3. Go to Application → Local Storage
+4. Find the JWT token
+5. Add it to `.env` as `QWEN_BEARER_TOKEN`
+
+---
+
+## 💻 Usage
+
+### Python Client
+
+```python
+from openai import OpenAI
+
+# Initialize client
+client = OpenAI(
+    api_key="sk-any",  # Any key works!
+    base_url="http://localhost:7050/v1"
+)
+
+# Simple chat
+response = client.chat.completions.create(
+    model="qwen-max-latest",  # Or any Qwen model
+    messages=[
+        {"role": "user", "content": "Write a haiku about Python"}
+    ]
+)
+
+print(response.choices[0].message.content)
 ```
 
-### Thinking Mode
+### Streaming
 
-```javascript
-const response = await fetch("https://qwen.aikit.club/v1/chat/completions", {
-  method: "POST",
-  headers: headers,
-  body: JSON.stringify({
-    model: "qwen-max-latest",
-    messages: [{ role: "user", content: "Solve this complex math problem: ..." }],
-    enable_thinking: true,
-    thinking_budget: 30000,
-  }),
-});
+```python
+stream = client.chat.completions.create(
+    model="qwen-max-latest",
+    messages=[{"role": "user", "content": "Tell me a story"}],
+    stream=True
+)
+
+for chunk in stream:
+    if chunk.choices[0].delta.content:
+        print(chunk.choices[0].delta.content, end="")
 ```
 
-### Code Generation (qwen3-coder-plus)
+### Function Calling
 
-Note: `qwen3-coder-plus` supports [Qwen Code](https://github.com/QwenLM/qwen-code) — a coding agent that operates in digital environments and can issue function/tool calls. This API supports handling the function calls produced by the agent.
-
-```javascript
-const response = await fetch("https://qwen.aikit.club/v1/chat/completions", {
-  method: "POST",
-  headers: headers,
-  body: JSON.stringify({
-    model: "qwen3-coder-plus",
-    tools: [{ type: "code" }],
-    messages: [
-      { role: "user", content: "Write a JavaScript function to add two numbers" },
-    ],
-    stream: true,
-  }),
-});
-```
-
-### Video Generation
-
-```javascript
-const response = await fetch("https://qwen.aikit.club/v1/videos/generations", {
-  method: "POST",
-  headers: headers,
-  body: JSON.stringify({
-    prompt: "A cat playing with a ball of yarn in slow motion",
-    size: "1280x720",
-  }),
-});
-```
-
-### Deep Research
-
-```javascript
-const response = await fetch("https://qwen.aikit.club/v1/chat/completions", {
-  method: "POST",
-  headers: headers,
-  body: JSON.stringify({
-    model: "qwen-deep-research",
-    messages: [
-      {
-        role: "user",
-        content: "Research the latest developments in quantum computing",
-      },
-    ],
-    stream: false,
-  }),
-});
-```
-
-### Web Development (qwen-web-dev)
-
-The `qwen-web-dev` model is specialized for frontend web development, creating interactive web components, HTML/CSS/JavaScript code, and providing live preview capabilities.
-
-**Features:**
-
-- HTML/CSS/JavaScript code generation
-- Interactive UI components
-- Responsive design support
-- Real-time preview generation
-- Framework support: React, Vue, Vanilla JS, HTML5
-- Styling: Tailwind CSS, Bootstrap
-
-```javascript
-const response = await fetch("https://qwen.aikit.club/v1/chat/completions", {
-  method: "POST",
-  headers: headers,
-  body: JSON.stringify({
-    model: "qwen-web-dev",
-    messages: [
-      {
-        role: "user",
-        content:
-          "Create a responsive navigation bar with a logo, menu items, and a mobile hamburger menu using HTML, CSS, and vanilla JavaScript",
-      },
-    ],
-    stream: false,
-  }),
-});
-```
-
-**Example Output:**
-The model will generate complete, production-ready web components with:
-
-- Clean, semantic HTML structure
-- Modern CSS with responsive breakpoints
-- Vanilla JavaScript for interactivity
-- Mobile-first design approach
-- Accessibility considerations
-
-### Full-Stack Development (qwen-full-stack)
-
-The `qwen-full-stack` model handles complete application development, from frontend to backend, database design, API development, and system architecture.
-
-**Features:**
-
-- Frontend and backend code generation
-- Database schema design
-- RESTful and GraphQL API development
-- Authentication and authorization
-- Microservices architecture
-- Deployment-ready code
-- Multi-language support: JavaScript, TypeScript, Python, Java, Go, PHP
-- Frameworks: React, Vue, Angular, Node.js, Express, Django, Flask, Spring Boot
-
-```javascript
-const response = await fetch("https://qwen.aikit.club/v1/chat/completions", {
-  method: "POST",
-  headers: headers,
-  body: JSON.stringify({
-    model: "qwen-full-stack",
-    messages: [
-      {
-        role: "user",
-        content:
-          "Create a complete REST API for a task management system with user authentication, CRUD operations for tasks, and a React frontend. Use Node.js/Express for the backend and MongoDB for the database.",
-      },
-    ],
-    stream: false,
-  }),
-});
-```
-
-**Example Full-Stack Application:**
-
-```javascript
-// Advanced example: Building a complete blog platform
-const response = await fetch("https://qwen.aikit.club/v1/chat/completions", {
-  method: "POST",
-  headers: headers,
-  body: JSON.stringify({
-    model: "qwen-full-stack",
-    messages: [
-      {
-        role: "user",
-        content: `Build a complete blog platform with the following requirements:
-
-Backend (Node.js/Express):
-- User authentication with JWT
-- CRUD operations for blog posts
-- Comment system
-- Like/bookmark functionality
-- Image upload support
-- RESTful API endpoints
-
-Frontend (React):
-- Home page with post listings
-- Post detail page with comments
-- Create/Edit post interface
-- User profile page
-- Responsive design with Tailwind CSS
-
-Database (MongoDB):
-- User schema with authentication
-- Post schema with relationships
-- Comment schema
-- Proper indexing for performance`,
-      },
-    ],
-    stream: false,
-  }),
-});
-```
-
-**Key Differences:**
-
-| Feature          | qwen-web-dev                               | qwen-full-stack                    |
-| ---------------- | ------------------------------------------ | ---------------------------------- |
-| **Focus**        | Frontend UI/UX                             | Complete application stack         |
-| **Code Output**  | HTML, CSS, JavaScript                      | Frontend + Backend + Database      |
-| **Use Cases**    | Web components, landing pages, UI elements | Complete apps, APIs, microservices |
-| **Complexity**   | Simple to moderate                         | Moderate to complex                |
-| **Architecture** | Client-side only                           | Full system architecture           |
-
-### Delete All Chats
-
-```javascript
-// Using DELETE method
-const response = await fetch("https://qwen.aikit.club/v1/chats/delete", {
-  method: "DELETE", // GET and POST are also supported
-  headers: headers,
-});
-```
-
-## 📁 Multimodal File Support
-
-The API supports various file formats for comprehensive multimodal interactions:
-
-> **⚠️ Important Limitation**: Multiple inputs of the same modality category are not supported. **Image, Audio, and Video** are considered the same category (media files), while **Documents** (PDF, TXT, etc.) are a separate category. You can combine different categories (e.g., image + PDF) but cannot combine files within the same category (e.g., image + video).
-
-### Supported File Types
-
-- **Media Files** _(same category)_:
-  - **Images**: **JPG, PNG, GIF, WebP** _(most common)_, BMP, TIFF, ICO, ICNS, JFIF, JP2
-  - **Audio**: **MP3, WAV, M4A, AAC** _(most common)_, AMR
-  - **Video**: **MP4, MOV, AVI, MKV** _(most common)_, WMV, FLV
-- **Documents** _(separate category)_: **PDF, TXT, MD** _(most common)_, DOC, DOCX, CSV, XLS, XLSX
-
-> **💡 Tip**: Bold formats are the most commonly used and recommended for best compatibility.
-
-### 📏 File Limits
-
-The following limits apply to multimodal file uploads:
-
-| File Type | Max Size (MB) | Max Count | Max Duration (seconds) |
-|-----------|---------------|-----------|------------------------|
-| **Images** | 10 | 5 | - |
-| **Audio** | 100 | 1 | 180 |
-| **Video** | 500 | 1 | 600 |
-| **Documents** | 20 | 5 | - |
-| **Default** | 20 | - | - |
-
-> **📋 Summary**: You can upload up to 5 images (10MB each), 1 audio file (100MB, 3 minutes), 1 video file (500MB, 10 minutes), or 5 documents (20MB each) per request.
-
-### ✅ Valid Combinations
-
-- ✅ Multiple images
-- ✅ Image + PDF
-- ✅ Audio + PDF
-- ✅ Video + PDF
-- ✅ Single image/audio/video only
-
-### ❌ Invalid Combinations
-
-- ❌ Image + Audio
-- ❌ Image + Video
-- ❌ Audio + Video
-- ❌ Multiple videos
-- ❌ Multiple audio files
-
-### Vision-Style Multimodal Chat
-
-```javascript
-// Analyze any supported file type using standard chat completions
-const response = await fetch("https://qwen.aikit.club/v1/chat/completions", {
-  method: "POST",
-  headers: headers,
-  body: JSON.stringify({
-    model: "qwen-max-latest",
-    messages: [
-      {
-        role: "user",
-        content: [
-          { type: "text", text: "What do you see in this image?" },
-          {
-            type: "image_url",
-            image_url: {
-              url: "https://download.samplelib.com/png/sample-hut-400x300.png",
-              // or use base64: "data:image/jpeg;base64,..."
+```python
+tools = [{
+    "type": "function",
+    "function": {
+        "name": "get_weather",
+        "description": "Get weather for a location",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "location": {"type": "string"},
+                "unit": {"type": "string", "enum": ["celsius", "fahrenheit"]}
             },
-          },
-        ],
-      },
-    ],
-  }),
-});
+            "required": ["location"]
+        }
+    }
+}]
+
+response = client.chat.completions.create(
+    model="qwen-max-latest",
+    messages=[{"role": "user", "content": "What's the weather in Tokyo?"}],
+    tools=tools
+)
 ```
 
-### Valid Multimodal Combination (Image + PDF)
+### Web Search (Native Tool)
 
-```javascript
-// ✅ VALID: Combine different categories (Media + Document)
-const response = await fetch("https://qwen.aikit.club/v1/chat/completions", {
-  method: "POST",
-  headers: headers,
-  body: JSON.stringify({
-    model: "qwen-max-latest",
-    messages: [
-      {
-        role: "user",
-        content: [
-          { type: "text", text: "Analyze this image and PDF document together" },
-          {
-            type: "image_url",
-            image_url: { url: "https://download.samplelib.com/png/sample-hut-400x300.png" },
-          },
-          {
-            type: "file_url",
-            file_url: { url: "https://pdfobject.com/pdf/sample.pdf" },
-          },
-        ],
-      },
-    ],
-  }),
-});
+```python
+response = client.chat.completions.create(
+    model="qwen-max-latest",
+    messages=[{"role": "user", "content": "What are the latest AI developments?"}],
+    extra_body={"tools": [{"type": "web_search"}]}
+)
 ```
 
-### ❌ Invalid Combinations (Don't Do This)
+### Vision (Image Analysis)
 
-```javascript
-// ❌ INVALID: Cannot combine image + video (same category)
-const response = await fetch("https://qwen.aikit.club/v1/chat/completions", {
-  method: "POST",
-  headers: headers,
-  body: JSON.stringify({
-    model: "qwen-max-latest",
-    messages: [
-      {
-        role: "user",
-        content: [
-          { type: "text", text: "This will not work properly" },
-          {
-            type: "image_url",
-            image_url: { url: "https://download.samplelib.com/png/sample-hut-400x300.png" },
-          },
-          {
-            type: "video_url",
-            video_url: { url: "https://download.samplelib.com/mp4/sample-10s.mp4" },
-          },
-          // ❌ Cannot mix media files (image, audio, video)
-        ],
-      },
-    ],
-  }),
-});
+```python
+response = client.chat.completions.create(
+    model="qwen-vl-max",
+    messages=[{
+        "role": "user",
+        "content": [
+            {"type": "text", "text": "What's in this image?"},
+            {"type": "image_url", "image_url": {"url": "https://example.com/image.jpg"}}
+        ]
+    }]
+)
 ```
+
+### Deep Research Mode
+
+```python
+response = client.chat.completions.create(
+    model="qwen-deep-research",
+    messages=[{"role": "user", "content": "Analyze the impact of quantum computing"}],
+    extra_body={"tools": [{"type": "deep_research"}]}
+)
+```
+
+---
+
+## 🔥 Native Tools
+
+Qwen API supports REAL native tools that actually execute (not simulated):
+
+### Available Tools
+
+#### 🌐 Web Search
+Real-time web browsing and information retrieval
+
+```python
+response = client.chat.completions.create(
+    model="qwen-max-latest",
+    messages=[{"role": "user", "content": "Latest news about SpaceX"}],
+    extra_body={"tools": [{"type": "web_search"}]}
+)
+```
+
+**Features:**
+- Real browser-based search
+- Multi-source aggregation
+- Citation tracking
+- Up-to-date information
+
+#### 👁️ Vision (Multimodal)
+Image analysis and understanding
+
+```python
+response = client.chat.completions.create(
+    model="qwen-vl-max",
+    messages=[{
+        "role": "user",
+        "content": [
+            {"type": "text", "text": "Describe this image"},
+            {"type": "image_url", "image_url": {"url": "image.jpg"}}
+        ]
+    }]
+)
+```
+
+**Supported Models:**
+- `qwen-vl-max` - Best vision model
+- `qwen-vl-plus` - Fast vision model
+- `qwen-vl-ocr` - OCR specialized
+
+#### 🧠 Deep Research
+Extended research mode with multi-source analysis
+
+```python
+response = client.chat.completions.create(
+    model="qwen-deep-research",
+    messages=[{"role": "user", "content": "Research quantum computing applications"}],
+    extra_body={
+        "tools": [{"type": "deep_research"}],
+        "max_tokens": 8000  # Up to 8000 tokens for comprehensive research
+    }
+)
+```
+
+**Features:**
+- Multi-source synthesis
+- Extended context (8000 tokens)
+- Structured analysis
+- Citation tracking
+
+#### ⚡ Code Execution (Beta)
+Python code generation and execution
+
+```python
+response = client.chat.completions.create(
+    model="qwen-max-latest",
+    messages=[{"role": "user", "content": "Calculate fibonacci(10) and plot it"}],
+    extra_body={"tools": [{"type": "code_interpreter"}]}
+)
+```
+
+**Note:** Code execution runs in a sandboxed environment.
+
+### Tool Configuration
+
+Tools can be configured via `extra_body`:
+
+```python
+response = client.chat.completions.create(
+    model="qwen-max-latest",
+    messages=[{"role": "user", "content": "Your query"}],
+    extra_body={
+        "tools": [
+            {"type": "web_search"},
+            {"type": "deep_research"}
+        ],
+        "tool_choice": "auto"  # or "required" or {"type": "function", "function": {"name": "tool_name"}}
+    }
+)
+```
+
+---
+
+## 📊 Supported Models
+
+### General Purpose
+- `qwen-max-latest` - Latest flagship model
+- `qwen-plus-latest` - Balanced performance/cost
+- `qwen-turbo-latest` - Fast responses
+- `qwen-long` - Extended context (up to 1M tokens)
+
+### Specialized Models
+- `qwen-vl-max` - Vision (image analysis)
+- `qwen-vl-plus` - Vision (fast)
+- `qwen-vl-ocr` - OCR specialized
+- `qwen-audio` - Audio processing
+- `qwen-deep-research` - Extended research
+
+### Code Models
+- `qwen-coder-plus` - Code generation
+- `qwen-coder-turbo` - Fast code generation
+
+### With Thinking/Search
+Add suffixes to any model:
+- `-thinking` - Chain-of-thought reasoning
+- `-search` - Web search integration
+- Example: `qwen-max-latest-thinking`
+
+### Model Aliasing
+
+The server supports flexible model naming:
+
+```python
+# All of these work:
+client.chat.completions.create(model="gpt-4", ...)          # Maps to qwen-max-latest
+client.chat.completions.create(model="qwen-max-latest", ...)
+client.chat.completions.create(model="qwen3-max", ...)      # Also works
+```
+
+See [MODEL_ALIAS_SYSTEM.md](./MODEL_ALIAS_SYSTEM.md) for details.
+
+---
+
+## 🐳 Docker Deployment
+
+### Using Docker Compose
+
+```bash
+# Create .env file
+cat > .env << EOF
+QWEN_EMAIL=your-email@example.com
+QWEN_PASSWORD=your-password
+PORT=7050
+EOF
+
+# Start server
+docker-compose up -d
+
+# Check logs
+docker-compose logs -f
+
+# Stop server
+docker-compose down
+```
+
+### Manual Docker
+
+```bash
+# Build image
+docker build -t qwen-api .
+
+# Run container
+docker run -d \
+  -p 7050:7050 \
+  -e QWEN_EMAIL=your-email@example.com \
+  -e QWEN_PASSWORD=your-password \
+  --name qwen-api \
+  qwen-api
+
+# Check logs
+docker logs -f qwen-api
+```
+
+---
+
+## 🧪 Testing
+
+The project includes comprehensive tests in the `tests/` directory:
+
+```bash
+# Run all tests
+pytest tests/ -v
+
+# Run specific test file
+pytest tests/test_native_tools.py -v
+
+# Run with coverage
+pytest tests/ --cov=qwen_api --cov-report=html
+```
+
+### Test Files
+- `test_client.py` - Basic client functionality
+- `test_native_tools.py` - Native tools (web search, vision, research)
+- `test_model_aliases.py` - Model aliasing system
+- `test_no_tools.py` - Non-tool functionality
+- `quick_test.py` - Quick smoke tests
+
+---
+
+## 🛠️ Development
+
+### Setup Development Environment
+
+```bash
+# Clone and install in editable mode
+git clone https://github.com/Zeeeepa/qwen-api
+cd qwen-api
+pip install -e ".[dev]"
+
+# Install pre-commit hooks
+pre-commit install
+
+# Run linters
+black py-api/
+ruff check py-api/
+mypy py-api/
+```
+
+### Project Structure
+
+```
+qwen-api/
+├── py-api/
+│   └── qwen_api/          # Main package
+│       ├── __init__.py
+│       ├── cli.py         # CLI interface
+│       ├── api_server.py  # FastAPI server
+│       ├── config_loader.py
+│       ├── qwen_client.py
+│       └── ...
+├── scripts/
+│   ├── all.sh            # One-command deploy
+│   ├── setup.sh          # Setup script
+│   ├── start.sh          # Start server
+│   └── send_request.sh   # Test request
+├── tests/                # Test suite
+├── pyproject.toml        # Package metadata
+├── .env.example          # Example config
+└── README.md
+```
+
+---
+
+## 🔍 Troubleshooting
+
+### Token Extraction Fails
+
+**Solution 1: Manual extraction**
+1. Login to [qwen.aikit.club](https://qwen.aikit.club)
+2. Open DevTools (F12) → Application → Local Storage
+3. Find JWT token
+4. Add to `.env`: `QWEN_BEARER_TOKEN=your-token`
+
+**Solution 2: Update credentials**
+```bash
+qwen-api get-token --email new-email@example.com --password new-password
+```
+
+### Port Already in Use
+
+```bash
+# Check what's using the port
+lsof -i :7050
+
+# Use different port
+qwen-api serve --port 8096
+```
+
+### Server Won't Start
+
+```bash
+# Check configuration
+qwen-api info
+
+# Check logs
+tail -f logs/server.log
+
+# Verify installation
+qwen-api --version
+```
+
+### Playwright Browser Issues
+
+```bash
+# Reinstall browsers
+playwright install chromium
+
+# With system dependencies (Ubuntu/Debian)
+playwright install --with-deps chromium
+```
+
+### Connection Timeout
+
+- Check if server is running: `qwen-api health`
+- Verify firewall settings
+- Check `.env` configuration
+- Ensure token is valid (re-run `qwen-api get-token`)
+
+---
+
+## 📚 Additional Documentation
+
+- [Native Tools Documentation](./NATIVE_TOOLS.md) - Detailed tools guide
+- [Model Alias System](./MODEL_ALIAS_SYSTEM.md) - Model mapping details
+- [API Documentation](./docs/API.md) - Complete API reference
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please:
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests
+5. Submit a pull request
+
+---
+
+## 📝 License
+
+MIT License - see [LICENSE](./LICENSE) file for details
+
+---
+
+## 🙏 Acknowledgments
+
+- Built on [FastAPI](https://fastapi.tiangolo.com/)
+- Uses [Playwright](https://playwright.dev/) for browser automation
+- OpenAI client compatibility via [OpenAI Python SDK](https://github.com/openai/openai-python)
+
+---
+
+## 📧 Support
+
+- GitHub Issues: [Report bugs](https://github.com/Zeeeepa/qwen-api/issues)
+- Documentation: [Full docs](./docs/)
+- Email: developer@pixelium.uk
+
+---
+
+<div align="center">
+
+**Made with ❤️ for the AI community**
+
+[⬆ Back to Top](#qwen-api---openai-compatible-api-server)
+
+</div>
+

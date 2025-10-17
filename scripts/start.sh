@@ -221,11 +221,11 @@ start_server_process() {
     log_info "Starting server on: http://${host}:${port}"
     log_info "Log file: $log_file"
     
-    # Build command
-    local cmd="python3 main.py --port $port --host $host"
+    # Build command using the CLI
+    local cmd="qwen-api serve --port $port --host $host"
     
     if [ "$debug_mode" = "true" ]; then
-        cmd="$cmd --debug"
+        cmd="$cmd --log-level debug"
         log_info "Debug mode enabled"
     fi
     

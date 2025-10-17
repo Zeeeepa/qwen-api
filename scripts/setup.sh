@@ -144,11 +144,11 @@ install_dependencies() {
         exit 1
     fi
     
-    log_info "Installing from requirements.txt..."
-    if uv pip install -r requirements.txt; then
-        log_success "Main dependencies installed"
+    log_info "Installing package in editable mode..."
+    if uv pip install -e .; then
+        log_success "Qwen API package installed successfully"
     else
-        log_error "Failed to install main dependencies"
+        log_error "Failed to install package"
         exit 1
     fi
     
