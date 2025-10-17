@@ -21,7 +21,7 @@ def cli():
 
 @cli.command()
 @click.option('--host', default=None, help='Host to bind to (default: from .env or 0.0.0.0)')
-@click.option('--port', default=None, type=int, help='Port to bind to (default: from .env or 8096)')
+@click.option('--port', default=None, type=int, help='Port to bind to (default: from .env or 7050)')
 @click.option('--reload', is_flag=True, help='Enable auto-reload for development')
 @click.option('--workers', default=1, type=int, help='Number of worker processes')
 @click.option('--log-level', default=None, help='Log level (debug, info, warning, error)')
@@ -29,9 +29,9 @@ def serve(host, port, reload, workers, log_level):
     """Start the Qwen API server"""
     
     # Use settings from .env or defaults
-    server_host = host or settings.SERVER_HOST
-    server_port = port or settings.SERVER_PORT
-    log_level = log_level or settings.LOG_LEVEL.lower()
+    server_host = host or settings.host
+    server_port = port or settings.port
+    log_level = log_level or settings.log_level.lower()
     
     logger.info(f"Starting Qwen API server on {server_host}:{server_port}")
     logger.info(f"Log level: {log_level}")
@@ -63,7 +63,7 @@ def health():
     import httpx
     
     try:
-        response = httpx.get(f"http://{settings.SERVER_HOST}:{settings.SERVER_PORT}/health", timeout=5)
+        response = httpx.get(f"http://{settings.host}:{settings.port}/health", timeout=5)
         if response.status_code == 200:
             click.echo(click.style("✓ Server is healthy", fg='green'))
             sys.exit(0)
@@ -104,11 +104,11 @@ def get_token(email, password):
 def info():
     """Display server configuration"""
     click.echo(click.style("Qwen API Configuration", fg='cyan', bold=True))
-    click.echo(f"  Server: {settings.SERVER_HOST}:{settings.SERVER_PORT}")
-    click.echo(f"  API Base: {settings.QWEN_API_BASE}")
-    click.echo(f"  Log Level: {settings.LOG_LEVEL}")
-    click.echo(f"  Token Length: {len(settings.QWEN_BEARER_TOKEN) if settings.QWEN_BEARER_TOKEN else 0} chars")
-    click.echo(f"  Email: {settings.QWEN_EMAIL or 'Not set'}")
+    click.echo(f"  Server: {settings.host}:{settings.port}")
+    click.echo(f"  API Base: {settings.qwen_api_base}")
+    click.echo(f"  Log Level: {settings.log_level}")
+    click.echo(f"  Token Length: {len(settings.qwen_bearer_token) if settings.qwen_bearer_token else 0} chars")
+    click.echo(f"  Default Model: {settings.default_model}")
 
 
 def main():
@@ -118,4 +118,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
