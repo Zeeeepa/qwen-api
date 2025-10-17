@@ -17,6 +17,7 @@ from app.providers.qwen_provider import QwenProvider
 from app.providers.qwen_simple_proxy import QwenSimpleProxy
 from app.providers.qwen_proxy_provider import QwenProxyProvider
 from app.utils.logger import get_logger
+from app.model_router import get_model_router
 
 logger = get_logger()
 
@@ -233,6 +234,11 @@ class ProviderRouter:
     ) -> Union[Dict[str, Any], AsyncGenerator[str, None]]:
         """路由请求到合适的提供商"""
         logger.info(f"🚦 路由请求: 模型={request.model}, 流式={request.stream}")
+
+        # ✨ NEW: Apply intelligent model routing
+        model_router = get_model_router()
+        request = model_router.transform_request(request)
+        logger.info(f"🎯 Transformed request: 模型={request.model}, 工具={len(request.tools) if request.tools else 0}, max_tokens={request.max_tokens}")
 
         # 获取提供商
         provider = self.factory.get_provider_for_model(request.model)
