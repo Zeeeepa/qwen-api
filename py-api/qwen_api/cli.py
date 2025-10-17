@@ -79,14 +79,41 @@ def health():
 @click.option('--email', envvar='QWEN_EMAIL', required=True, help='Qwen account email')
 @click.option('--password', envvar='QWEN_PASSWORD', required=True, help='Qwen account password')
 def get_token(email, password):
-    """Extract Qwen authentication token"""
+    """Extract Qwen authentication token and save to .env"""
     import asyncio
+    from pathlib import Path
     from .qwen_token_real import extract_qwen_token
     
     async def extract():
         token = await extract_qwen_token(email, password)
         if token:
             click.echo(token)
+            
+            # Save token to .env file
+            env_path = Path('.env')
+            try:
+                # Read existing .env content
+                env_lines = []
+                if env_path.exists():
+                    env_lines = env_path.read_text().splitlines()
+                
+                # Update or add QWEN_BEARER_TOKEN
+                token_found = False
+                for i, line in enumerate(env_lines):
+                    if line.startswith('QWEN_BEARER_TOKEN='):
+                        env_lines[i] = f'QWEN_BEARER_TOKEN={token}'
+                        token_found = True
+                        break
+                
+                if not token_found:
+                    env_lines.append(f'QWEN_BEARER_TOKEN={token}')
+                
+                # Write back to .env
+                env_path.write_text('\n'.join(env_lines) + '\n')
+                click.echo(click.style(f"\n✓ Token saved to {env_path.absolute()}", fg='green'))
+            except Exception as e:
+                click.echo(click.style(f"\n⚠ Warning: Could not save to .env: {e}", fg='yellow'), err=True)
+            
             return 0
         else:
             click.echo(click.style("✗ Failed to extract token", fg='red'), err=True)

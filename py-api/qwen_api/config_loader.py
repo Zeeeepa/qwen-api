@@ -7,6 +7,10 @@ Centralized configuration management for Qwen API
 import os
 from typing import Optional
 from dataclasses import dataclass
+from dotenv import load_dotenv
+
+# Load .env file
+load_dotenv()
 
 
 @dataclass
@@ -36,4 +40,3 @@ class Settings:
 
 # Global settings instance
 settings = Settings()
-
