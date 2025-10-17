@@ -1,0 +1,17 @@
+fastapi==0.116.1
+granian[reload,pname]==2.5.2
+uvicorn[standard]>=0.30.0
+httpx==0.28.1
+pydantic==2.11.7
+pydantic-settings==2.10.1
+pydantic-core==2.33.2
+typing-inspection==0.4.1
+fake-useragent==2.2.0
+loguru==0.7.3
+psutil>=7.0.0
+json-repair==0.44.1
+cryptography>=43.0.0
+playwright>=1.40.0
+rich>=13.7.0
+PyJWT>=2.8.0
+openai>=1.0.0

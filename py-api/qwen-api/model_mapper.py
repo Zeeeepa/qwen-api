@@ -1,90 +1,81 @@
 #!/usr/bin/env python3
 """
 Model Name Mapper
-Maps any model name to valid Qwen models
+Maps any model name to valid Qwen models using ModelRegistry
 """
 
-from typing import Optional
+from typing import Optional, List, Dict, Any
 from .config_loader import settings
 from .logging_config import logger
-
-
-# Valid Qwen models registry
-VALID_QWEN_MODELS = {
-    # Qwen 3.x models
-    "qwen3-max": "qwen3-max",
-    "qwen3-vl-plus": "qwen3-vl-plus",
-    "qwen3-coder-plus": "qwen3-coder-plus",
-    "qwen3-vl-30b-a3b": "qwen3-vl-30b-a3b",
-    
-    # Qwen 2.5 models
-    "qwen2.5-vl-32b-instruct": "qwen2.5-vl-32b-instruct",
-    "qwen2.5-14b-instruct-1m": "qwen2.5-14b-instruct-1m",
-    "qwen2.5-coder-32b-instruct": "qwen2.5-coder-32b-instruct",
-    "qwen2.5-72b-instruct": "qwen2.5-72b-instruct",
-    
-    # Legacy aliases (map to qwen3-max)
-    "qwen-max-latest": "qwen3-max",
-    "qwen-plus-latest": "qwen3-max",
-    "qwen-turbo-latest": "qwen3-max",
-    "qwen-max": "qwen3-max",
-    "qwen-plus": "qwen3-max",
-    "qwen-turbo": "qwen3-max",
-}
+from .models.registry import get_registry
 
 
 def map_model_name(model: Optional[str]) -> str:
-    """
-    Map any model name to a valid Qwen model.
+    """Map any model name to a valid Qwen backend model ID"""
+    registry = get_registry()
     
-    Args:
-        model: Input model name (can be None, empty, or any string)
-        
-    Returns:
-        Valid Qwen model name
-    """
     if not model:
-        return settings.default_model
+        return registry.get_default_model()
     
-    # Normalize model name (lowercase, remove spaces)
-    normalized = model.lower().strip().replace(" ", "-")
+    backend_id = registry.get_backend_id(model)
     
-    # Check if it's a known Qwen model
-    if normalized in VALID_QWEN_MODELS:
-        return VALID_QWEN_MODELS[normalized]
+    if backend_id == registry.get_default_model() and model.lower() != backend_id.lower():
+        logger.debug(f"Model '{model}' mapped to default: {backend_id}")
     
-    # Default fallback
-    logger.debug(f"Unknown model '{model}', using default: {settings.default_model}")
-    return settings.default_model
+    return backend_id
 
 
-def list_available_models() -> list:
+def list_available_models() -> List[Dict[str, Any]]:
     """Return list of available models for /v1/models endpoint"""
-    return [
-        {
-            "id": "qwen3-max",
+    registry = get_registry()
+    models = registry.list_models()
+    
+    result = []
+    for model in models:
+        model_dict = {
+            "id": model['id'],
             "object": "model",
-            "owned_by": "qwen"
-        },
-        {
-            "id": "qwen3-vl-plus",
-            "object": "model",
-            "owned_by": "qwen"
-        },
-        {
-            "id": "qwen3-coder-plus",
-            "object": "model",
-            "owned_by": "qwen"
-        },
-        {
-            "id": "qwen2.5-72b-instruct",
-            "object": "model",
-            "owned_by": "qwen"
-        },
-        {
-            "id": "qwen2.5-coder-32b-instruct",
-            "object": "model",
-            "owned_by": "qwen"
-        },
-    ]
+            "owned_by": "qwen",
+            "capabilities": model.get('capabilities', {})
+        }
+        result.append(model_dict)
+    
+    return result
 
+
+def get_model_capabilities(model_id: str) -> Dict[str, bool]:
+    """Get capabilities for a specific model"""
+    registry = get_registry()
+    return registry.get_capabilities(model_id)
+
+
+def supports_vision(model_id: str) -> bool:
+    """Check if model supports vision/image inputs"""
+    registry = get_registry()
+    return registry.supports_capability(model_id, 'vision')
+
+
+def supports_tools(model_id: str) -> bool:
+    """Check if model supports tool/function calling"""
+    registry = get_registry()
+    return registry.supports_capability(model_id, 'tools')
+
+
+# Backwards compatibility
+def _get_legacy_models_dict() -> dict:
+    """Legacy compatibility - DEPRECATED"""
+    registry = get_registry()
+    models = registry.list_models()
+    
+    legacy_dict = {}
+    for model in models:
+        legacy_dict[model['id']] = model['backend_id']
+        if model['id'] in registry._alias_map.values():
+            for alias, target_id in registry._alias_map.items():
+                if target_id == model['id']:
+                    legacy_dict[alias] = model['backend_id']
+    
+    return legacy_dict
+
+
+VALID_QWEN_MODELS = _get_legacy_models_dict()
