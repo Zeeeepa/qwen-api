@@ -9,7 +9,7 @@ import time
 import sys
 
 # Configuration
-SERVER_PORT = 8080
+SERVER_PORT = 8096
 BASE_URL = f"http://localhost:{SERVER_PORT}/v1"
 
 # Initialize client
@@ -274,4 +274,3 @@ if __name__ == "__main__":
         import traceback
         traceback.print_exc()
         sys.exit(1)
-
