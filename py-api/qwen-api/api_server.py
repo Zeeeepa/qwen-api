@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field
 
 from .config_loader import settings
 from .logging_config import logger
-from .model_mapper import map_model_name, list_available_models
+from .model_mapper import map_model_name, list_available_models, ModelConfig
 from .request_normalizer import normalize_messages
 from .qwen_client import QwenClient
 
@@ -210,6 +210,48 @@ def get_qwen_client() -> QwenClient:
     return qwen_client
 
 
+def merge_tools(auto_tools: List[Dict[str, Any]], user_tools: Optional[List[Dict[str, Any]]]) -> Optional[List[Dict[str, Any]]]:
+    """
+    Merge auto-injected tools with user-provided tools
+    
+    Strategy:
+    - Start with auto_tools from model config
+    - Add user_tools if provided
+    - Deduplicate by tool type (user tools take precedence)
+    - Return None if no tools (preserves backward compatibility)
+    
+    Args:
+        auto_tools: Tools from model configuration
+        user_tools: Tools from user request
+        
+    Returns:
+        Merged tool list or None
+    """
+    if not auto_tools and not user_tools:
+        return None
+    
+    # Start with auto tools
+    merged = list(auto_tools) if auto_tools else []
+    
+    # Add user tools
+    if user_tools:
+        # Track tool types we already have
+        existing_types = {tool.get("type") for tool in merged if "type" in tool}
+        
+        # Add user tools that aren't duplicates
+        for tool in user_tools:
+            tool_type = tool.get("type")
+            if tool_type not in existing_types:
+                merged.append(tool)
+            # If user provides same type, their version takes precedence
+            else:
+                # Remove auto version, add user version
+                merged = [t for t in merged if t.get("type") != tool_type]
+                merged.append(tool)
+    
+    return merged if merged else None
+
+
 @app.on_event("startup")
 async def startup_event():
     """Initialize on startup"""
@@ -396,9 +438,15 @@ async def chat_completions(
         # Get client
         client = get_qwen_client()
         
-        # Map model name
-        mapped_model = map_model_name(request.model)
-        logger.debug(f"Model mapping: '{request.model or 'none'}' → '{mapped_model}'")
+        # Map model name to ModelConfig with auto-features
+        model_config = map_model_name(request.model)
+        qwen_model = model_config.qwen_model
+        
+        logger.info(f"🎯 Model routing: '{request.model or 'none'}' → '{qwen_model}'")
+        if model_config.auto_tools:
+            logger.info(f"   Auto-tools: {[t['type'] for t in model_config.auto_tools]}")
+        if model_config.thinking_enabled:
+            logger.info(f"   Thinking: enabled (max_tokens={model_config.max_tokens_override})")
         
         # Normalize request format
         messages_list = [
@@ -414,23 +462,42 @@ async def chat_completions(
         
         logger.debug(f"Normalized {len(normalized_messages)} message(s)")
         
+        # Merge auto-tools with user-provided tools
+        final_tools = merge_tools(model_config.auto_tools, request.tools)
+        if final_tools:
+            logger.debug(f"Final tools: {[t['type'] for t in final_tools]}")
+        
+        # Apply thinking mode if configured
+        enable_thinking = request.enable_thinking
+        if model_config.thinking_enabled and enable_thinking is None:
+            enable_thinking = True
+            logger.debug("Auto-enabled thinking mode")
+        
+        # Apply max_tokens override if configured and not user-specified
+        max_tokens = request.max_tokens
+        if model_config.max_tokens_override and max_tokens is None:
+            max_tokens = model_config.max_tokens_override
+            logger.debug(f"Applied max_tokens override: {max_tokens}")
+        
         # Call Qwen API via client
         qwen_response = await client.chat_completion(
-            model=mapped_model,
+            model=qwen_model,
             messages=normalized_messages,
             temperature=request.temperature,
-            max_tokens=request.max_tokens,
+            max_tokens=max_tokens,
             stream=request.stream,
-            enable_thinking=request.enable_thinking,
+            enable_thinking=enable_thinking,
             thinking_budget=request.thinking_budget,
-            tools=request.tools,
+            tools=final_tools,
             tool_choice=request.tool_choice
         )
         
         # Qwen API already returns OpenAI format
-        # Just ensure model field is set correctly
+        # Use original requested model name for OpenAI compatibility
+        response_model = request.model or qwen_model
+        
         if "choices" in qwen_response:
-            qwen_response["model"] = mapped_model
+            qwen_response["model"] = response_model
             return qwen_response
         
         # Fallback: construct OpenAI format response
@@ -438,7 +505,7 @@ async def chat_completions(
             "id": f"chatcmpl-{int(datetime.now().timestamp())}",
             "object": "chat.completion",
             "created": int(datetime.now().timestamp()),
-            "model": mapped_model,
+            "model": response_model,
             "choices": [{
                 "index": 0,
                 "message": {
