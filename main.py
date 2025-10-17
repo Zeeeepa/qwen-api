@@ -9,6 +9,7 @@ from granian import Granian
 
 from app.core import image_endpoints, openai
 from app.core.config import settings
+from app.middleware.openapi_validator import OpenAPIValidationMiddleware
 from app.providers import initialize_providers
 from app.utils.flareprox_manager import initialize_flareprox
 from app.utils.logger import setup_logger
@@ -51,6 +52,16 @@ async def lifespan(app: FastAPI):
 
 # Create FastAPI app with lifespan
 app = FastAPI(lifespan=lifespan)
+
+# Add OpenAPI Validation Middleware (FIRST - validates requests before processing)
+# This middleware automatically validates all requests/responses against qwen.json
+app.add_middleware(
+    OpenAPIValidationMiddleware,
+    spec_path="qwen.json",
+    validate_requests=True,      # Enable request validation
+    validate_responses=False,    # Disable response validation by default (performance)
+    strict_mode=False            # Don't fail requests on response validation errors
+)
 
 # Add CORS middleware
 app.add_middleware(
