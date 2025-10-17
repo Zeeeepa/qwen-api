@@ -14,10 +14,39 @@
 
 ---
 
+## 🔥 Native Tools Support
+
+**NEW!** Qwen API now supports REAL native tools that actually execute:
+
+- 🌐 **Web Search** - Real-time web browsing (not simulated!)
+- 👁️ **Vision** - Image analysis via multimodal input
+- 🧠 **Deep Research** - Extended multi-source research mode (up to 8000 tokens)
+- ⚡ **Code Execution** - Python code generation & execution (beta)
+
+> 📖 **[Read Full Native Tools Documentation](./NATIVE_TOOLS.md)**
+
+### Quick Example - Web Search
+
+```python
+from openai import OpenAI
+
+client = OpenAI(api_key="sk-any", base_url="http://localhost:7050/v1")
+
+# The model will actually browse the web!
+result = client.chat.completions.create(
+    model="qwen-max-latest",
+    messages=[{"role": "user", "content": "What are the latest AI developments?"}],
+    extra_body={"tools": [{"type": "web_search"}]}
+)
+```
+
+---
+
 ## 🎯 Features
 
 - ✅ **OpenAI-Compatible API** - Drop-in replacement for OpenAI API
 - 🔄 **Multi-Provider Support** - Z.AI, K2Think, Qwen (45+ models total)
+- 🔥 **Native Tools** - Web search, vision, deep research, code execution
 - 🚀 **Unlimited Scalability** - FlareProx integration for IP rotation via Cloudflare Workers
 - 🐳 **Docker Ready** - One-command deployment with docker-compose
 - ⚡ **High Performance** - Async/await, streaming support
