@@ -1,0 +1,87 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "qwen-api"
+version = "1.0.0"
+description = "OpenAI-compatible API server for Qwen models with advanced features"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+authors = [
+    {name = "Qwen API Contributors"}
+]
+keywords = ["qwen", "api", "openai", "llm", "ai"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+
+dependencies = [
+    "fastapi>=0.100.0",
+    "uvicorn[standard]>=0.23.0",
+    "granian>=1.0.0",
+    "httpx>=0.24.0",
+    "pydantic>=2.0.0",
+    "pydantic-settings>=2.0.0",
+    "python-dotenv>=1.0.0",
+    "loguru>=0.7.0",
+    "rich>=13.0.0",
+    "playwright>=1.40.0",
+    "openai>=1.0.0",
+    "psutil>=5.9.0",
+    "pyjwt>=2.8.0",
+    "cryptography>=41.0.0",
+    "fake-useragent>=1.4.0",
+    "click>=8.0.0",
+    "json-repair>=0.20.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-playwright>=0.4.0",
+    "black>=23.0.0",
+    "ruff>=0.1.0",
+    "mypy>=1.5.0",
+]
+
+[project.scripts]
+qwen-api = "qwen_api.cli:main"
+qwen-token = "qwen_api.get_token:main"
+
+[project.urls]
+Homepage = "https://github.com/Zeeeepa/qwen-api"
+Repository = "https://github.com/Zeeeepa/qwen-api"
+Issues = "https://github.com/Zeeeepa/qwen-api/issues"
+
+[tool.setuptools.packages.find]
+where = ["py-api"]
+include = ["qwen_api*"]
+
+[tool.setuptools.package-data]
+qwen_api = ["py.typed"]
+
+[tool.black]
+line-length = 100
+target-version = ['py39', 'py310', 'py311', 'py312']
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+
