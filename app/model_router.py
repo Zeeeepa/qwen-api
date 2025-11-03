@@ -11,46 +11,70 @@ logger = get_logger()
 
 
 # Model routing configuration
+# These are the 4 accessible models with specific features
 MODEL_CONFIGS = {
-    # Special aliases with custom behavior
-    "qwen_research": {
-        "actual_model": "qwen-deep-research",
-        "tools": [],  # No tools for research mode
+    # Model 1: Qwen3-Max (no thinking, web search always applied)
+    "qwen3-max": {
+        "actual_model": "qwen3-max-latest",
+        "tools": ["web_search"],
         "max_tokens": None,
-        "description": "Deep research mode without tools"
+        "thinking": False,
+        "description": "Qwen3-Max: No thinking option, web search feature always applied"
     },
-    "qwen_think": {
+    
+    # Model 2: Qwen3-235B-A22B-2507 (web search + thinking, 81,920 tokens)
+    "qwen3-235b": {
         "actual_model": "qwen3-235b-a22b-2507",
         "tools": ["web_search"],
         "max_tokens": 81920,
-        "description": "Thinking model with web search and extended context"
-    },
-    "qwen_code": {
-        "actual_model": "qwen3-coder-plus",
-        "tools": ["web_search"],
-        "max_tokens": None,
-        "description": "Code generation with web search"
+        "thinking": True,
+        "description": "Qwen3-235B: Web search + thinking, 81,920 tokens"
     },
     
-    # Default fallback configuration
+    # Model 3: Qwen3-VL-235B-A22B (NO web search + thinking, 81,920 tokens)
+    "qwen3-vl": {
+        "actual_model": "qwen3-vl-235b-a22b",
+        "tools": [],  # NO web search
+        "max_tokens": 81920,
+        "thinking": True,
+        "description": "Qwen3-VL-235B: No web search, thinking enabled, 81,920 tokens"
+    },
+    
+    # Model 4: Qwen3-Omni-Flash (NO web search + thinking, 81,920 tokens)
+    "qwen3-omni": {
+        "actual_model": "qwen3-omni-flash",
+        "tools": [],  # NO web search
+        "max_tokens": 81920,
+        "thinking": True,
+        "description": "Qwen3-Omni-Flash: No web search, thinking enabled, 81,920 tokens"
+    },
+    
+    # Default fallback configuration (maps to Qwen3-Max)
     "_default": {
         "actual_model": "qwen3-max-latest",
         "tools": ["web_search"],
         "max_tokens": None,
-        "description": "Default model with web search"
+        "thinking": False,
+        "description": "Default fallback to Qwen3-Max with web search"
     }
 }
 
 
 # Known Qwen models that should NOT be aliased
 # These pass through directly without any transformation
+# Includes the 4 primary models and their variants
 KNOWN_QWEN_MODELS = {
+    # Primary 4 models
+    "qwen3-max-latest",
+    "qwen3-235b-a22b-2507",
+    "qwen3-vl-235b-a22b",
+    "qwen3-omni-flash",
+    
+    # Legacy/variant models
     "qwen2.5-max",
     "qwen2.5-turbo",
     "qwen-deep-research",
     "qwen-max-latest",
-    "qwen3-max-latest",
-    "qwen3-235b-a22b-2507",
     "qwen3-coder-plus",
     "qwen-math-plus",
     "qwen-math-turbo",
@@ -267,4 +291,3 @@ def get_model_router() -> ModelRouter:
     if _router is None:
         _router = ModelRouter()
     return _router
-
