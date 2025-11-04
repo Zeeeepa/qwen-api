@@ -1,660 +1,427 @@
-# Qwen API - OpenAI-Compatible API Proxy
+# Qwen API - OpenAI Compatible API Gateway
 
-![Version](https://img.shields.io/badge/version-0.2.0-blue)
-![Python](https://img.shields.io/badge/python-3.11+-green)
-![License](https://img.shields.io/badge/license-MIT-orange)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 
-A production-ready, OpenAI-compatible API proxy for Qwen models with intelligent model routing, automatic tool injection, and comprehensive validation.
-
----
-
-## 🌟 Key Features
-
-### ✨ Intelligent Model Routing
-- **Smart Aliases**: Use friendly names like `Qwen_Research`, `Qwen_Think`, `Qwen_Code`
-- **Auto-Tool Injection**: Web search automatically added server-side
-- **Default Fallback**: Unknown models → `qwen3-max-latest` with web search
-- **Backward Compatible**: Direct Qwen model names work unchanged
-
-### 🔒 Security & Validation
-- **OpenAPI Validation**: All requests validated against official OpenAI spec
-- **Anonymous Mode**: Works without API keys (or any key works)
-- **Bearer Token Caching**: Automated authentication with Playwright
-- **Request/Response Sanitization**: Full validation middleware
-
-### 🚀 Performance
-- **Async/Await**: Non-blocking I/O for high concurrency
-- **Streaming Support**: Full SSE streaming for real-time responses
-- **Request Tracking**: Built-in monitoring and analytics
-- **Health Checks**: `/health` and `/v1/models` endpoints
-
----
-
-## 📋 Model Aliases
-
-### 1. **"Qwen"** (Default Fallback)
-- **Alias for:** `qwen3-max-latest`
-- **Auto-Tools:** `web_search` (always applied)
-- **Max Tokens:** Provider default
-- **Use Case:** General purpose, unknown model names
-- **Example:**
-  ```python
-  # These all route to qwen3-max-latest + web_search:
-  model="gpt-4"
-  model="claude-3-opus"
-  model="random-model-name"
-  ```
-
-### 2. **"Qwen_Research"** Alias
-- **Routes to:** `qwen-deep-research`
-- **Auto-Tools:** **NONE** (clean research mode)
-- **Max Tokens:** Provider default
-- **Use Case:** Deep research without tool interference
-- **Example:**
-  ```python
-  client = OpenAI(api_key="sk-any", base_url="http://localhost:8096/v1")
-  response = client.chat.completions.create(
-      model="Qwen_Research",  # Case-insensitive
-      messages=[{"role": "user", "content": "Research quantum computing"}]
-  )
-  ```
-
-### 3. **"Qwen_Think"** Alias
-- **Routes to:** `qwen3-235b-a22b-2507`
-- **Auto-Tools:** `web_search` (always applied)
-- **Max Tokens:** `81,920` (extended context)
-- **Use Case:** Complex reasoning with web access
-- **Example:**
-  ```python
-  response = client.chat.completions.create(
-      model="Qwen_Think",
-      messages=[{"role": "user", "content": "Solve this complex problem..."}]
-  )
-  # Server automatically adds web_search tool + 81920 token limit
-  ```
-
-### 4. **"Qwen_Code"** Alias
-- **Routes to:** `qwen3-coder-plus`
-- **Auto-Tools:** `web_search` (always applied)
-- **Max Tokens:** Provider default
-- **Use Case:** Code generation with web documentation access
-- **Example:**
-  ```python
-  response = client.chat.completions.create(
-      model="Qwen_Code",
-      messages=[{"role": "user", "content": "Write a Python REST API"}]
-  )
-  # Web search helps with latest library documentation
-  ```
-
----
-
-## 🔧 Direct Qwen Models (No Aliasing)
-
-These models pass through without transformation:
-
-```python
-# Backward compatibility - work as expected:
-model="qwen2.5-max"
-model="qwen2.5-turbo"
-model="qwen-deep-research"
-model="qwen-max-latest"
-model="qwen3-max-latest"
-model="qwen3-235b-a22b-2507"
-model="qwen3-coder-plus"
-model="qwen-math-plus"
-model="qwen-math-turbo"
-model="qwen-coder-turbo"
-model="qwen-vl-max"
-model="qwen-vl-plus"
-```
+Transform Qwen's powerful AI models into an OpenAI-compatible API with intelligent model routing, automatic tool injection, and server-side feature management.
 
 ---
 
 ## 🚀 Quick Start
 
-### Option 1: One-Line Deployment (Recommended)
-
 ```bash
-# Set your Qwen credentials
-export QWEN_EMAIL="your-email@example.com"
-export QWEN_PASSWORD="your-password"
-
-# Deploy everything (setup + auth + server + tests)
-curl -sSL https://raw.githubusercontent.com/Zeeeepa/qwen-api/main/deploy_qwen_api.sh | bash
-```
-
-### Option 2: Manual Deployment
-
-```bash
-# Clone repository
+# 1. Clone the repository
 git clone https://github.com/Zeeeepa/qwen-api.git
 cd qwen-api
 
-# Set credentials
-export QWEN_EMAIL="your-email@example.com"
-export QWEN_PASSWORD="your-password"
+# 2. Set credentials
+export QWEN_EMAIL="your@email.com"
+export QWEN_PASSWORD="yourpassword"
 
-# Run deployment script
-bash scripts/all.sh
-```
-
-### Option 3: Step-by-Step
-
-```bash
-# 1. Setup environment
+# 3. Setup (one command!)
 bash scripts/setup.sh
 
-# 2. Extract authentication token
-python3 scripts/extract_bearer_token.py
-
-# 3. Start server
+# 4. Start server (automatically tests all endpoints!)
 bash scripts/start.sh
-
-# 4. Test API (optional)
-bash scripts/send_request.sh
 ```
+
+**That's it!** The server will:
+- ✅ Start automatically on port 8096
+- ✅ Show network IP for LAN access
+- ✅ Test all 4 model endpoints
+- ✅ Display configuration and usage examples
 
 ---
 
-## 📦 Installation Details
+## 🤖 Available Models
 
-### System Requirements
+Four powerful models with server-side defaults - clients don't need to specify tools or thinking mode:
 
-- **Python:** 3.11 or higher
-- **OS:** Linux, macOS, Windows (WSL2)
-- **Memory:** 512MB minimum, 2GB recommended
-- **Disk:** 500MB for dependencies + browsers
-
-### Dependencies
-
-```bash
-# Core dependencies (auto-installed by setup script)
-pip install -r requirements.txt
-
-# Key packages:
-# - fastapi + granian (async web server)
-# - playwright (browser automation)
-# - httpx (HTTP client)
-# - pydantic (data validation)
-```
-
-### Manual Setup
-
-```bash
-# 1. Create virtual environment
-python3 -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-
-# 2. Install dependencies
-pip install --upgrade pip
-pip install -r requirements.txt
-
-# 3. Install Playwright browsers
-playwright install --with-deps chromium
-
-# 4. Create .env file
-cat > .env << EOF
-LISTEN_PORT=8096
-ANONYMOUS_MODE=true
-EOF
-
-# 5. Create directories
-mkdir -p logs cache
-```
-
----
-
-## 🔐 Authentication
-
-### Automated (Recommended)
-
-The deployment script automatically:
-1. Launches headless Chromium browser
-2. Logs into Qwen with your credentials
-3. Extracts Bearer token from network traffic
-4. Caches token to `.qwen_bearer_token`
-5. Reuses cached token until expiration
-
-### Manual Token Extraction
-
-```bash
-# Run Playwright authentication
-python3 scripts/extract_bearer_token.py
-
-# Token saved to: .qwen_bearer_token
-# Format: Bearer eyJ...
-```
-
-### Anonymous Mode
-
-**No credentials needed!** The server works in anonymous mode:
-
+### 1. Qwen3 / Qwen3-Max (Fast + Current)
 ```python
-# Any API key works:
-client = OpenAI(api_key="sk-anything", base_url="http://localhost:8096/v1")
-client = OpenAI(api_key="fake-key-123", base_url="http://localhost:8096/v1")
-client = OpenAI(api_key="", base_url="http://localhost:8096/v1")
+model = "qwen3"  # or "qwen3-max"
+# Server automatically applies: web_search
+# Thinking: ❌ Disabled (fast responses)
+# Max Tokens: Provider default
 ```
+**Best for:** Current events, news, fast Q&A with web verification
+
+### 2. Qwen3-Web / Qwen3-235B (Deep Research)
+```python
+model = "qwen3-web"  # or "qwen3-235b"
+# Server automatically applies: web_search + thinking
+# Thinking: ✅ Enabled
+# Max Tokens: 81,920 (extended context)
+```
+**Best for:** Complex reasoning with internet, multi-step analysis, research
+
+### 3. Qwen3-VL (Vision-Language)
+```python
+model = "qwen3-vl"
+# Server automatically applies: thinking (NO web_search)
+# Thinking: ✅ Enabled
+# Max Tokens: 81,920 (extended context)
+```
+**Best for:** Image analysis, visual question answering, document interpretation
+
+### 4. Qwen3-Omni (Multimodal)
+```python
+model = "qwen3-omni"
+# Server automatically applies: thinking (NO web_search)
+# Thinking: ✅ Enabled
+# Max Tokens: 81,920 (extended context)
+```
+**Best for:** Text + Image + Audio + Video, cross-modal understanding
 
 ---
 
-## 🎯 Usage Examples
+## 💻 Usage Examples
 
 ### Python (OpenAI SDK)
 
 ```python
 from openai import OpenAI
 
-# Initialize client
+# Local usage
 client = OpenAI(
-    api_key="sk-any",  # Any key works!
+    api_key="sk-any",  # Any non-empty string works
     base_url="http://localhost:8096/v1"
 )
 
-# Example 1: Unknown model → Default fallback
+# Network usage (use IP shown by start.sh)
+client = OpenAI(
+    api_key="sk-any",
+    base_url="http://192.168.1.100:8096/v1"  # Your network IP
+)
+
+# Example 1: Fast Q&A with web search
 response = client.chat.completions.create(
-    model="gpt-4",  # Routes to qwen3-max-latest + web_search
-    messages=[{"role": "user", "content": "Hello!"}]
+    model="qwen3",  # Server auto-applies web_search
+    messages=[
+        {"role": "user", "content": "What's new in AI today?"}
+    ]
 )
 print(response.choices[0].message.content)
 
-# Example 2: Research mode (no tools)
+# Example 2: Complex reasoning with web + thinking
 response = client.chat.completions.create(
-    model="Qwen_Research",  # qwen-deep-research, no tools
-    messages=[{"role": "user", "content": "Research topic..."}]
+    model="qwen3-web",  # Server auto-applies web_search + thinking
+    messages=[
+        {"role": "user", "content": "Analyze the impact of quantum computing on cryptography"}
+    ]
 )
+print(response.choices[0].message.content)
 
-# Example 3: Thinking mode (extended context)
+# Example 3: Image analysis (Vision-Language)
 response = client.chat.completions.create(
-    model="Qwen_Think",  # qwen3-235b-a22b-2507 + web_search + 81920 tokens
-    messages=[{"role": "user", "content": "Complex reasoning..."}]
+    model="qwen3-vl",  # Server auto-applies thinking, NO web
+    messages=[
+        {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": "What architectural style is this?"},
+                {"type": "image_url", "image_url": {"url": "https://example.com/building.jpg"}}
+            ]
+        }
+    ]
 )
+print(response.choices[0].message.content)
 
-# Example 4: Code generation
+# Example 4: Multimodal analysis
 response = client.chat.completions.create(
-    model="Qwen_Code",  # qwen3-coder-plus + web_search
-    messages=[{"role": "user", "content": "Write FastAPI endpoint"}]
+    model="qwen3-omni",  # Server auto-applies thinking, NO web
+    messages=[
+        {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": "Analyze this presentation"},
+                {"type": "image_url", "image_url": {"url": "https://example.com/slide.jpg"}},
+                # Audio and video support coming soon
+            ]
+        }
+    ]
 )
-
-# Example 5: Streaming
-stream = client.chat.completions.create(
-    model="Qwen_Think",
-    messages=[{"role": "user", "content": "Write a story"}],
-    stream=True
-)
-for chunk in stream:
-    if chunk.choices[0].delta.content:
-        print(chunk.choices[0].delta.content, end="")
+print(response.choices[0].message.content)
 ```
 
 ### cURL
 
 ```bash
-# Test with any model name
-curl -X POST http://localhost:8096/v1/chat/completions \
+# Test endpoint
+curl http://localhost:8096/health
+
+# List models
+curl http://localhost:8096/v1/models \
+  -H "Authorization: Bearer sk-any"
+
+# Chat completion (qwen3)
+curl http://localhost:8096/v1/chat/completions \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer sk-any" \
   -d '{
-    "model": "Qwen_Think",
-    "messages": [{"role": "user", "content": "Hello!"}]
+    "model": "qwen3",
+    "messages": [
+      {"role": "user", "content": "What are the latest AI developments?"}
+    ]
   }'
 
-# Streaming
-curl -X POST http://localhost:8096/v1/chat/completions \
+# Chat completion with streaming (qwen3-web)
+curl http://localhost:8096/v1/chat/completions \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer sk-any" \
   -d '{
-    "model": "Qwen_Code",
-    "messages": [{"role": "user", "content": "Write Python code"}],
+    "model": "qwen3-web",
+    "messages": [
+      {"role": "user", "content": "Explain quantum entanglement"}
+    ],
     "stream": true
   }'
 ```
 
-### Node.js
+---
 
-```javascript
-import OpenAI from 'openai';
+## 📋 Project Structure
 
-const client = new OpenAI({
-  apiKey: 'sk-any',
-  baseURL: 'http://localhost:8096/v1'
-});
-
-// Use any model alias
-const response = await client.chat.completions.create({
-  model: 'Qwen_Think',
-  messages: [{ role: 'user', content: 'Hello!' }]
-});
-
-console.log(response.choices[0].message.content);
 ```
+qwen-api/
+├── app/                      # Application code
+│   ├── __init__.py
+│   ├── core/                # Core functionality
+│   ├── models/              # Data models
+│   ├── providers/           # Provider integrations
+│   ├── utils/               # Utilities
+│   ├── cli.py              # CLI interface
+│   └── model_router.py     # Intelligent routing
+├── bin/                      # Executable scripts
+│   ├── demo_4_models.py    # Model configuration demo
+│   ├── extract_qwen_token.py  # Token extraction
+│   ├── main.py             # Main application
+│   ├── setup.py            # Setup utilities
+│   └── start.py            # Server startup
+├── docs/                     # Documentation
+│   ├── DEPLOYMENT.md       # Deployment guide
+│   ├── GET_TOKEN.md        # Token extraction guide
+│   ├── INSTALL.md          # Installation guide
+│   ├── MODELS.md           # Model specifications
+│   └── QUICKSTART.md       # Quick start guide
+├── scripts/                  # Deployment scripts
+│   ├── setup.sh            # Complete environment setup
+│   ├── start.sh            # Start server & test endpoints
+│   ├── send_request.sh     # Send test requests
+│   └── deploy_qwen_api.sh  # Full deployment
+├── tests/                    # Test suite
+│   ├── unit/               # Unit tests
+│   ├── integration/        # Integration tests
+│   ├── e2e/                # End-to-end tests
+│   └── conftest.py         # Test configuration
+├── .env.example             # Environment template
+├── .gitignore              # Git ignore rules
+├── LICENSE                 # MIT License
+├── Makefile                # Make commands
+├── README.md               # This file
+├── pyproject.toml          # Python project config
+├── pytest.ini              # Pytest configuration
+├── qwen.json               # API specification
+└── requirements.txt        # Python dependencies
+```
+
+---
+
+## ⚙️ Configuration
+
+### Environment Variables
+
+Create a `.env` file or set environment variables:
+
+```bash
+# Required for token extraction
+QWEN_EMAIL=your@email.com
+QWEN_PASSWORD=yourpassword
+
+# Optional server configuration
+PORT=8096                    # Server port (default: 8096)
+HOST=0.0.0.0                # Server host (default: 0.0.0.0)
+LOG_LEVEL=INFO              # Logging level (default: INFO)
+```
+
+### Model Routing
+
+The server automatically routes model aliases to actual Qwen models with server-side features:
+
+| Client Request | Actual Model | Web Search | Thinking | Max Tokens |
+|----------------|--------------|------------|----------|------------|
+| `qwen3` or `qwen3-max` | `qwen3-max-latest` | ✅ Auto-injected | ❌ Disabled | Default |
+| `qwen3-web` or `qwen3-235b` | `qwen3-235b-a22b-2507` | ✅ Auto-injected | ✅ Enabled | 81,920 |
+| `qwen3-vl` | `qwen3-vl-235b-a22b` | ❌ Not applied | ✅ Enabled | 81,920 |
+| `qwen3-omni` | `qwen3-omni-flash` | ❌ Not applied | ✅ Enabled | 81,920 |
+
+**Key Features:**
+- ✅ Server-side tool injection (clients don't need to specify)
+- ✅ Automatic thinking mode configuration
+- ✅ Token limit management
+- ✅ Case-insensitive model names
+- ✅ Backward compatible with all aliases
 
 ---
 
 ## 🧪 Testing
 
-### Run Comprehensive Test Suite
+### Run All Tests
 
 ```bash
-# Test all routing scenarios + tool integration
-python3 test_all_routing_scenarios.py
+# Run complete test suite
+pytest tests/ -v
+
+# Run specific test categories
+pytest tests/unit/ -v           # Unit tests
+pytest tests/integration/ -v    # Integration tests
+pytest tests/e2e/ -v           # End-to-end tests
+
+# Run with coverage
+pytest tests/ --cov=app --cov-report=html
 ```
 
-### Expected Output
+### Run Standalone Tests
 
-```
-🚀 COMPREHENSIVE ROUTING & TOOL INTEGRATION TESTS
-================================================================================
+```bash
+# Test all 4 model configurations
+python bin/demo_4_models.py
 
-Testing against: http://localhost:8096/v1
-Total scenarios: 5 routing + 2 web search tests
+# Test endpoint behavior
+python tests/test_endpoint_behavior_standalone.py
 
-✅ SCENARIO 1: Default Fallback (gpt-5 → qwen3-max-latest + web_search)
-✅ SCENARIO 2: Qwen_Research (→ qwen-deep-research, no tools)
-✅ SCENARIO 3: Qwen_Think (→ qwen3-235b-a22b-2507 + web_search + 81920 tokens)
-✅ SCENARIO 4: Qwen_Code (→ qwen3-coder-plus + web_search)
-✅ SCENARIO 5: Direct Model (qwen2.5-max → qwen2.5-max, no changes)
-✅ WEB SEARCH TEST 1: gpt-4 with web search
-✅ WEB SEARCH TEST 2: Qwen_Think with web search
-
-📊 TEST SUMMARY
-Total Tests: 7
-Passed: 7
-Failed: 0
-Pass Rate: 100.0%
-
-🎉 ALL TESTS PASSED! 🎉
+# Send test request
+bash scripts/send_request.sh
 ```
 
 ### Manual Testing
 
-```bash
-# Health check
-curl http://localhost:8096/health
-
-# List models
-curl http://localhost:8096/v1/models
-
-# Simple request
-python3 scripts/send_request.sh
-```
-
----
-
-## 📁 Project Structure
-
-```
-qwen-api/
-├── app/
-│   ├── core/
-│   │   └── openai.py          # OpenAI endpoints (/chat/completions)
-│   ├── middleware/
-│   │   └── openapi_validator.py  # Request/response validation
-│   ├── model_router.py        # ⭐ Intelligent routing + tool injection
-│   ├── providers/
-│   │   ├── base.py
-│   │   ├── provider_factory.py
-│   │   └── qwen_simple_proxy.py
-│   └── utils/
-│       ├── logger.py
-│       └── request_tracker.py
-├── scripts/
-│   ├── setup.sh               # Environment setup
-│   ├── extract_bearer_token.py  # Playwright authentication
-│   ├── start.sh               # Start server
-│   ├── deploy.sh              # All-in-one deployment
-│   └── send_request.sh        # Test script
-├── start.py                   # Server entry point (replaces main.py)
-├── test_all_routing_scenarios.py  # Comprehensive test suite
-├── requirements.txt
-├── qwen.json                  # OpenAPI spec for validation
-└── README.md                  # This file
-```
-
----
-
-## 🔧 Configuration
-
-### Environment Variables
+The `start.sh` script automatically tests all 4 endpoints when starting:
 
 ```bash
-# .env file configuration
-LISTEN_PORT=8096              # Server port
-ANONYMOUS_MODE=true           # Allow any API key
-LOG_LEVEL=INFO                # DEBUG, INFO, WARNING, ERROR
-
-# Optional: Runtime settings
-QWEN_EMAIL=your-email@example.com
-QWEN_PASSWORD=your-password
-```
-
-### Server Settings
-
-Edit `start.py` to customize:
-
-```python
-# Port binding
-port = int(os.getenv("LISTEN_PORT", "8096"))
-
-# Log level
-log_level = os.getenv("LOG_LEVEL", "INFO").upper()
-
-# Worker configuration (Granian)
-workers = 1  # Increase for production
-threads = 1  # HTTP/1.1 threads
-```
-
-### Model Router Configuration
-
-Edit `app/model_router.py` to customize aliases:
-
-```python
-MODEL_CONFIGS = {
-    "qwen_research": {
-        "actual_model": "qwen-deep-research",
-        "tools": [],  # No tools
-        "max_tokens": None,
-    },
-    "qwen_think": {
-        "actual_model": "qwen3-235b-a22b-2507",
-        "tools": ["web_search"],
-        "max_tokens": 81920,  # Extended context
-    },
-    # Add your custom aliases here...
-}
-```
-
----
-
-## 🚨 Troubleshooting
-
-### Server won't start
-
-```bash
-# Check port availability
-lsof -i :8096
-
-# Check logs
-tail -f logs/server.log
-
-# Verify Python version
-python3 --version  # Should be 3.11+
-
-# Reinstall dependencies
-pip install -r requirements.txt --force-reinstall
-```
-
-### Authentication issues
-
-```bash
-# Re-extract token
-rm .qwen_bearer_token
-python3 scripts/extract_bearer_token.py
-
-# Check token validity
-cat .qwen_bearer_token
-```
-
-### Connection errors in tests
-
-```bash
-# Ensure server is running
-curl http://localhost:8096/health
-
-# Check server logs for errors
-tail -20 logs/server.log
-
-# Restart server
-pkill -f "python3 start.py"
 bash scripts/start.sh
-```
 
-### Tool injection not working
-
-```bash
-# Check model router logs
-grep "Auto-injecting tools" logs/server.log
-
-# Verify model alias resolution
-grep "Model transformation" logs/server.log
-
-# Expected output:
-# 📝 Model transformation: gpt-4 → qwen3-max-latest
-# 🛠️ Auto-injecting tools for gpt-4: ['web_search']
+# Output shows test results:
+# ✅ qwen3 → qwen3-max-latest
+# ✅ qwen3-web → qwen3-235b-a22b-2507
+# ✅ qwen3-vl → qwen3-vl-235b-a22b
+# ✅ qwen3-omni → qwen3-omni-flash
 ```
 
 ---
 
-## 📊 API Endpoints
+## 🚀 Deployment
 
-### Chat Completions
+### Local Development
 
-```
-POST /v1/chat/completions
-```
-
-**Request:**
-```json
-{
-  "model": "Qwen_Think",
-  "messages": [
-    {"role": "system", "content": "You are a helpful assistant."},
-    {"role": "user", "content": "Hello!"}
-  ],
-  "stream": false,
-  "max_tokens": 1000,
-  "temperature": 0.7
-}
+```bash
+# Setup and start in one go
+bash scripts/setup.sh && bash scripts/start.sh
 ```
 
-**Response:**
-```json
-{
-  "id": "chatcmpl-123",
-  "object": "chat.completion",
-  "created": 1234567890,
-  "model": "qwen3-235b-a22b-2507",
-  "choices": [{
-    "index": 0,
-    "message": {
-      "role": "assistant",
-      "content": "Hello! How can I help you today?"
-    },
-    "finish_reason": "stop"
-  }]
-}
+### Production Deployment
+
+```bash
+# Use the comprehensive deployment script
+bash scripts/deploy_qwen_api.sh
 ```
 
-### List Models
+See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for detailed deployment options including:
+- Docker deployment
+- systemd service setup
+- Nginx reverse proxy
+- SSL/TLS configuration
 
-```
-GET /v1/models
+---
+
+## 📚 Documentation
+
+- **[Quick Start Guide](docs/QUICKSTART.md)** - Get started in 5 minutes
+- **[Installation Guide](docs/INSTALL.md)** - Detailed installation instructions
+- **[Model Specifications](docs/MODELS.md)** - Complete model documentation
+- **[Token Extraction](docs/GET_TOKEN.md)** - How to get your Bearer token
+- **[Deployment Guide](docs/DEPLOYMENT.md)** - Production deployment
+
+---
+
+## 🔧 Development
+
+### Setup Development Environment
+
+```bash
+# Clone and setup
+git clone https://github.com/Zeeeepa/qwen-api.git
+cd qwen-api
+
+# Create virtual environment
+python3 -m venv venv
+source venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Install Playwright browsers
+playwright install chromium --with-deps
+
+# Extract token (if credentials set)
+python bin/extract_qwen_token.py
+
+# Run in development mode
+python bin/start.py
 ```
 
-**Response:**
-```json
-{
-  "object": "list",
-  "data": [
-    {
-      "id": "qwen3-max-latest",
-      "object": "model",
-      "created": 1234567890,
-      "owned_by": "qwen"
-    },
-    {
-      "id": "qwen-deep-research",
-      "object": "model",
-      "created": 1234567890,
-      "owned_by": "qwen"
-    }
-  ]
-}
-```
+### Make Commands
 
-### Health Check
-
-```
-GET /health
-```
-
-**Response:**
-```json
-{
-  "status": "ok",
-  "service": "qwen-ai2api-server",
-  "version": "0.2.0"
-}
+```bash
+make setup          # Setup environment
+make start          # Start server
+make test           # Run tests
+make clean          # Clean cache files
+make format         # Format code
+make lint           # Lint code
 ```
 
 ---
 
 ## 🤝 Contributing
 
-Contributions welcome! Please:
+Contributions are welcome! Please feel free to submit a Pull Request.
 
 1. Fork the repository
-2. Create feature branch (`git checkout -b feature/amazing`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing`)
-5. Open Pull Request
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
 ---
 
 ## 📄 License
 
-MIT License - see [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
 
 ## 🙏 Acknowledgments
 
-- **Qwen Team** - For the amazing language models
-- **OpenAI** - For the API specification
-- **FastAPI** - For the excellent web framework
-- **Playwright** - For browser automation
+- [Qwen](https://qwen.ai/) - For providing powerful AI models
+- [OpenAI](https://openai.com/) - For the API specification standard
+- [FastAPI](https://fastapi.tiangolo.com/) - For the excellent web framework
+- [Playwright](https://playwright.dev/) - For browser automation
 
 ---
 
-## 📝 Changelog
+## 📞 Support
 
-### v0.2.0 (Current)
-- ✨ Added intelligent model routing
-- ✨ Implemented 4 model aliases (Qwen, Qwen_Research, Qwen_Think, Qwen_Code)
-- ✨ Auto-tool injection (web_search)
-- ✨ OpenAPI validation middleware
-- ✨ Comprehensive test suite
-- 🐛 Fixed streaming response handling
-- 📚 Complete documentation
-
-### v0.1.0
-- 🎉 Initial release
-- ✅ OpenAI-compatible endpoints
-- ✅ Bearer token authentication
-- ✅ Basic request/response handling
+- **Issues**: [GitHub Issues](https://github.com/Zeeeepa/qwen-api/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/Zeeeepa/qwen-api/discussions)
 
 ---
 
-**Made with ❤️ for the AI community**
+## 🌟 Star History
+
+If you find this project useful, please consider giving it a ⭐ on GitHub!
+
+---
+
+**Built with ❤️ by the Qwen API community**
 

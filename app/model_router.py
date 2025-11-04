@@ -14,6 +14,14 @@ logger = get_logger()
 # These are the 4 accessible models with specific features
 MODEL_CONFIGS = {
     # Model 1: Qwen3-Max (no thinking, web search always applied)
+    # Aliases: qwen3, qwen3-max
+    "qwen3": {
+        "actual_model": "qwen3-max-latest",
+        "tools": ["web_search"],
+        "max_tokens": None,
+        "thinking": False,
+        "description": "Qwen3-Max: No thinking option, web search feature always applied"
+    },
     "qwen3-max": {
         "actual_model": "qwen3-max-latest",
         "tools": ["web_search"],
@@ -23,6 +31,14 @@ MODEL_CONFIGS = {
     },
     
     # Model 2: Qwen3-235B-A22B-2507 (web search + thinking, 81,920 tokens)
+    # Aliases: qwen3-web, qwen3-235b
+    "qwen3-web": {
+        "actual_model": "qwen3-235b-a22b-2507",
+        "tools": ["web_search"],
+        "max_tokens": 81920,
+        "thinking": True,
+        "description": "Qwen3-235B: Web search + thinking, 81,920 tokens"
+    },
     "qwen3-235b": {
         "actual_model": "qwen3-235b-a22b-2507",
         "tools": ["web_search"],
@@ -32,6 +48,7 @@ MODEL_CONFIGS = {
     },
     
     # Model 3: Qwen3-VL-235B-A22B (NO web search + thinking, 81,920 tokens)
+    # Alias: qwen3-vl
     "qwen3-vl": {
         "actual_model": "qwen3-vl-235b-a22b",
         "tools": [],  # NO web search
@@ -41,6 +58,7 @@ MODEL_CONFIGS = {
     },
     
     # Model 4: Qwen3-Omni-Flash (NO web search + thinking, 81,920 tokens)
+    # Alias: qwen3-omni
     "qwen3-omni": {
         "actual_model": "qwen3-omni-flash",
         "tools": [],  # NO web search
