@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 ################################################################################
-# setup.sh - Full Setup (Without Starting Server)
-# Sets up Python environment, installs dependencies, and configures the system
+# setup.sh - Complete Environment Setup with Token Extraction
+# Sets up Python environment, installs dependencies, and extracts Bearer token
 ################################################################################
 
 set -e
@@ -15,14 +15,39 @@ CYAN='\033[0;36m'
 BOLD='\033[1m'
 NC='\033[0m'
 
-echo -e "${CYAN}${BOLD}╔════════════════════════════════════════════════════╗${NC}"
-echo -e "${CYAN}${BOLD}║       Qwen API - Setup Script                     ║${NC}"
-echo -e "${CYAN}${BOLD}╚════════════════════════════════════════════════════╝${NC}\n"
+# Progress indicators
+STEP=0
+TOTAL_STEPS=7
 
-# Check Python 3.8+
-echo -e "${BLUE}🔍 Checking Python version...${NC}"
+print_step() {
+    STEP=$((STEP + 1))
+    echo -e "\n${CYAN}${BOLD}[Step $STEP/$TOTAL_STEPS]${NC} ${BLUE}$1${NC}"
+}
+
+print_success() {
+    echo -e "${GREEN}✅ $1${NC}"
+}
+
+print_error() {
+    echo -e "${RED}❌ $1${NC}"
+}
+
+print_warning() {
+    echo -e "${YELLOW}⚠️  $1${NC}"
+}
+
+print_info() {
+    echo -e "${CYAN}ℹ️  $1${NC}"
+}
+
+echo -e "${CYAN}${BOLD}╔════════════════════════════════════════════════════════════╗${NC}"
+echo -e "${CYAN}${BOLD}║       Qwen API - Complete Setup Script                    ║${NC}"
+echo -e "${CYAN}${BOLD}╚════════════════════════════════════════════════════════════╝${NC}\n"
+
+# Step 1: Check Python version
+print_step "Checking Python version"
 if ! command -v python3 &>/dev/null; then
-    echo -e "${RED}❌ Python 3 not found. Please install Python 3.8 or higher.${NC}"
+    print_error "Python 3 not found. Please install Python 3.8 or higher."
     exit 1
 fi
 
@@ -31,100 +56,114 @@ MAJOR_VERSION=$(echo "$PYTHON_VERSION" | cut -d. -f1)
 MINOR_VERSION=$(echo "$PYTHON_VERSION" | cut -d. -f2)
 
 if [ "$MAJOR_VERSION" -lt 3 ] || ([ "$MAJOR_VERSION" -eq 3 ] && [ "$MINOR_VERSION" -lt 8 ]); then
-    echo -e "${RED}❌ Python $PYTHON_VERSION detected. Python 3.8+ required.${NC}"
+    print_error "Python $PYTHON_VERSION detected. Python 3.8+ required."
     exit 1
 fi
 
-echo -e "${GREEN}✅ Python $PYTHON_VERSION detected${NC}\n"
+print_success "Python $PYTHON_VERSION detected"
 
-# Create virtual environment
-echo -e "${BLUE}🔧 Creating Python virtual environment...${NC}"
+# Step 2: Create virtual environment
+print_step "Creating Python virtual environment"
 if [ ! -d "venv" ]; then
     python3 -m venv venv
-    echo -e "${GREEN}✅ Virtual environment created${NC}\n"
+    print_success "Virtual environment created"
 else
-    echo -e "${YELLOW}⚠️  Virtual environment already exists${NC}\n"
+    print_warning "Virtual environment already exists"
 fi
 
-# Activate virtual environment
-echo -e "${BLUE}🔌 Activating virtual environment...${NC}"
+# Step 3: Activate virtual environment
+print_step "Activating virtual environment"
 source venv/bin/activate
-echo -e "${GREEN}✅ Virtual environment activated${NC}\n"
+print_success "Virtual environment activated"
 
-# Upgrade pip
-echo -e "${BLUE}📦 Upgrading pip...${NC}"
-pip install --upgrade pip --quiet
-echo -e "${GREEN}✅ pip upgraded${NC}\n"
+# Step 4: Upgrade pip
+print_step "Upgrading pip"
+python -m pip install --upgrade pip > /dev/null 2>&1
+print_success "Pip upgraded to latest version"
 
-# Install dependencies
-echo -e "${BLUE}📦 Installing Python dependencies...${NC}"
+# Step 5: Install dependencies
+print_step "Installing dependencies"
+print_info "This may take a few minutes..."
+
 if [ -f "requirements.txt" ]; then
-    pip install -r requirements.txt --quiet
-    echo -e "${GREEN}✅ Dependencies installed${NC}\n"
+    pip install -r requirements.txt > /dev/null 2>&1
+    print_success "Python dependencies installed"
 else
-    echo -e "${YELLOW}⚠️  requirements.txt not found${NC}\n"
+    print_error "requirements.txt not found"
+    exit 1
 fi
 
-# Install Playwright browsers
-echo -e "${BLUE}🌐 Installing Playwright browsers...${NC}"
-playwright install chromium --with-deps
-echo -e "${GREEN}✅ Playwright browsers installed${NC}\n"
+# Step 6: Install Playwright browsers
+print_step "Installing Playwright browsers"
+print_info "This may take a few minutes on first run..."
 
-# Setup environment file
-echo -e "${BLUE}⚙️  Setting up environment configuration...${NC}"
-if [ ! -f ".env" ]; then
-    cat > .env << EOF
-# Qwen API Configuration
-LISTEN_PORT=8096
-DEBUG_LOGGING=true
+playwright install chromium --with-deps > /dev/null 2>&1
+print_success "Playwright browsers installed"
 
-# Qwen Credentials (will be set by user)
-QWEN_EMAIL=${QWEN_EMAIL:-}
-QWEN_PASSWORD=${QWEN_PASSWORD:-}
+# Step 7: Extract Bearer token
+print_step "Extracting Bearer token"
 
-# Optional: Bearer Token (if you already have one)
-# QWEN_BEARER_TOKEN=
-EOF
-    echo -e "${GREEN}✅ .env file created${NC}\n"
-else
-    echo -e "${YELLOW}⚠️  .env file already exists${NC}\n"
-fi
-
-# Prompt for credentials if not set
+# Check if credentials are set
 if [ -z "$QWEN_EMAIL" ] || [ -z "$QWEN_PASSWORD" ]; then
-    echo -e "${YELLOW}📝 Qwen credentials not found in environment${NC}"
-    echo -e "${BLUE}Please enter your Qwen credentials:${NC}"
+    print_warning "QWEN_EMAIL or QWEN_PASSWORD not set"
+    print_info "You can set them now or manually later:"
+    echo -e "${YELLOW}    export QWEN_EMAIL=\"your@email.com\"${NC}"
+    echo -e "${YELLOW}    export QWEN_PASSWORD=\"yourpassword\"${NC}"
+    echo -e "${YELLOW}    python extract_qwen_token.py${NC}"
+else
+    print_info "Credentials found, extracting token..."
     
-    if [ -z "$QWEN_EMAIL" ]; then
-        read -p "$(echo -e ${CYAN}Email: ${NC})" QWEN_EMAIL
-        echo "QWEN_EMAIL=$QWEN_EMAIL" >> .env
+    if [ -f "extract_qwen_token.py" ]; then
+        # Run token extraction
+        python extract_qwen_token.py
+        
+        if [ $? -eq 0 ] && [ -f ".qwen_bearer_token" ]; then
+            TOKEN_PREVIEW=$(head -c 20 .qwen_bearer_token)
+            print_success "Bearer token extracted successfully"
+            print_info "Token preview: ${TOKEN_PREVIEW}..."
+            print_success "Token saved to .qwen_bearer_token"
+        else
+            print_error "Failed to extract token"
+            print_warning "You can try manually later with: python extract_qwen_token.py"
+        fi
+    else
+        print_error "extract_qwen_token.py not found"
     fi
-    
-    if [ -z "$QWEN_PASSWORD" ]; then
-        read -sp "$(echo -e ${CYAN}Password: ${NC})" QWEN_PASSWORD
-        echo
-        echo "QWEN_PASSWORD=$QWEN_PASSWORD" >> .env
-    fi
-    
-    echo -e "${GREEN}✅ Credentials saved to .env${NC}\n"
 fi
 
-# Add anonymous mode setting (always add if not present)
-if ! grep -q "ANONYMOUS_MODE" .env 2>/dev/null; then
-    echo "ANONYMOUS_MODE=true" >> .env
-    echo -e "${GREEN}✅ Anonymous mode enabled${NC}\n"
+# Final summary
+echo -e "\n${GREEN}${BOLD}╔════════════════════════════════════════════════════════════╗${NC}"
+echo -e "${GREEN}${BOLD}║                  Setup Complete! ✅                        ║${NC}"
+echo -e "${GREEN}${BOLD}╚════════════════════════════════════════════════════════════╝${NC}\n"
+
+print_success "Environment setup completed successfully"
+
+echo -e "${CYAN}📋 What was done:${NC}"
+echo -e "   ✅ Python $PYTHON_VERSION environment created"
+echo -e "   ✅ All dependencies installed"
+echo -e "   ✅ Playwright browsers ready"
+if [ -f ".qwen_bearer_token" ]; then
+    echo -e "   ✅ Bearer token extracted and cached"
+else
+    echo -e "   ⚠️  Bearer token not extracted (set credentials first)"
 fi
 
-# Create necessary directories
-echo -e "${BLUE}📁 Creating necessary directories...${NC}"
-mkdir -p .sessions logs
-echo -e "${GREEN}✅ Directories created${NC}\n"
+echo -e "\n${CYAN}🚀 Next steps:${NC}"
+echo -e "   1. Start the server:    ${YELLOW}bash scripts/start.sh${NC}"
+echo -e "   2. Run tests:           ${YELLOW}bash scripts/run_tests.sh${NC}"
+echo -e "   3. Send test request:   ${YELLOW}bash scripts/send_request.sh${NC}"
 
-echo -e "${GREEN}${BOLD}╔════════════════════════════════════════════════════╗${NC}"
-echo -e "${GREEN}${BOLD}║       ✅ Setup Complete!                          ║${NC}"
-echo -e "${GREEN}${BOLD}╚════════════════════════════════════════════════════╝${NC}\n"
+echo -e "\n${CYAN}💡 Configuration:${NC}"
+echo -e "   • Port:         ${YELLOW}8096${NC}"
+echo -e "   • API Base:     ${YELLOW}http://localhost:8096/v1${NC}"
+echo -e "   • Docs:         ${YELLOW}http://localhost:8096/docs${NC}"
+echo -e "   • Health:       ${YELLOW}http://localhost:8096/health${NC}"
 
-echo -e "${CYAN}Next steps:${NC}"
-echo -e "  ${BLUE}1.${NC} Start the server: ${YELLOW}bash scripts/start.sh${NC}"
-echo -e "  ${BLUE}2.${NC} Test the API: ${YELLOW}bash scripts/send_request.sh${NC}"
-echo -e "  ${BLUE}3.${NC} Or run everything: ${YELLOW}bash scripts/all.sh${NC}\n"
+echo -e "\n${CYAN}📚 Available Models:${NC}"
+echo -e "   • ${YELLOW}qwen3${NC} or ${YELLOW}qwen3-max${NC}    → qwen3-max-latest (web search, no thinking)"
+echo -e "   • ${YELLOW}qwen3-web${NC} or ${YELLOW}qwen3-235b${NC}  → qwen3-235b-a22b-2507 (web + thinking, 81K tokens)"
+echo -e "   • ${YELLOW}qwen3-vl${NC}              → qwen3-vl-235b-a22b (no web, thinking, 81K tokens)"
+echo -e "   • ${YELLOW}qwen3-omni${NC}            → qwen3-omni-flash (no web, thinking, 81K tokens)"
+
+echo -e "\n${GREEN}${BOLD}════════════════════════════════════════════════════════════${NC}\n"
+
